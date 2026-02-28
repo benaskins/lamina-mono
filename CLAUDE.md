@@ -63,6 +63,10 @@ go test -run TestName ./  # Single test
 go vet ./...        # Lint
 ```
 
+## Planning
+
+- Plan steps should be commit-sized — each step produces one testable, committable change
+
 ## Conventions
 
 - **Task runner**: `just` (justfile) in aurelia and aurelia-core-infrastructure; standard `go` tooling in axon
