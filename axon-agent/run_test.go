@@ -80,7 +80,7 @@ func TestRunWithToolCall(t *testing.T) {
 		Model:    "test-model",
 		Messages: []agent.Message{{Role: "user", Content: "What time is it?"}},
 	}, tools, &tool.ToolContext{Ctx: context.Background()}, agent.Callbacks{
-		OnToolUse: func(name string) {
+		OnToolUse: func(name string, args map[string]any) {
 			toolUses = append(toolUses, name)
 		},
 	})
@@ -146,6 +146,55 @@ func TestRunWithThinking(t *testing.T) {
 	if len(thinkingTokens) == 0 {
 		t.Error("expected OnThinking callback")
 	}
+}
+
+func TestRunPassesToolsToClient(t *testing.T) {
+	var receivedTools []tool.ToolDef
+	client := &spyClient{
+		onChat: func(req *agent.ChatRequest) {
+			receivedTools = req.Tools
+		},
+		responses: []agent.ChatResponse{
+			{Content: "ok", Done: true},
+		},
+	}
+
+	tools := map[string]tool.ToolDef{
+		"current_time": tool.CurrentTimeTool(),
+	}
+
+	_, err := agent.Run(context.Background(), client, &agent.ChatRequest{
+		Model:    "test",
+		Messages: []agent.Message{{Role: "user", Content: "time?"}},
+	}, tools, &tool.ToolContext{Ctx: context.Background()}, agent.Callbacks{})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(receivedTools) != 1 {
+		t.Fatalf("expected 1 tool in request, got %d", len(receivedTools))
+	}
+	if receivedTools[0].Name != "current_time" {
+		t.Errorf("tool name = %q, want %q", receivedTools[0].Name, "current_time")
+	}
+}
+
+// spyClient records the ChatRequest for inspection.
+type spyClient struct {
+	onChat    func(req *agent.ChatRequest)
+	responses []agent.ChatResponse
+}
+
+func (s *spyClient) Chat(ctx context.Context, req *agent.ChatRequest, fn func(agent.ChatResponse) error) error {
+	if s.onChat != nil {
+		s.onChat(req)
+	}
+	for _, resp := range s.responses {
+		if err := fn(resp); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // multiTurnClient simulates a client that returns different responses on each call.

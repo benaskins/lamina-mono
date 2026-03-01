@@ -3,7 +3,11 @@
 // and streaming — with no HTTP, persistence, or UI concerns.
 package agent
 
-import "context"
+import (
+	"context"
+
+	tool "github.com/benaskins/axon-tool"
+)
 
 // Message represents a single message in a conversation.
 type Message struct {
@@ -23,6 +27,7 @@ type ToolCall struct {
 type ChatRequest struct {
 	Model    string
 	Messages []Message
+	Tools    []tool.ToolDef
 	Stream   bool
 	Options  map[string]any
 }

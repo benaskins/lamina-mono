@@ -15,7 +15,7 @@ import (
 type Callbacks struct {
 	OnToken    func(token string)
 	OnThinking func(token string)
-	OnToolUse  func(name string)
+	OnToolUse  func(name string, args map[string]any)
 	OnDone     func(durationMs int64)
 }
 
@@ -38,10 +38,17 @@ func Run(ctx context.Context, client ChatClient, req *ChatRequest, tools map[str
 	var finalContent strings.Builder
 	var finalThinking strings.Builder
 
+	// Build tool list from map for the ChatClient
+	var toolDefs []tool.ToolDef
+	for _, td := range tools {
+		toolDefs = append(toolDefs, td)
+	}
+
 	for {
 		chatReq := &ChatRequest{
 			Model:    req.Model,
 			Messages: messages,
+			Tools:    toolDefs,
 			Stream:   req.Stream,
 			Options:  req.Options,
 		}
@@ -103,7 +110,7 @@ func Run(ctx context.Context, client ChatClient, req *ChatRequest, tools map[str
 		// Execute each tool call
 		for _, tc := range toolCalls {
 			if cb.OnToolUse != nil {
-				cb.OnToolUse(tc.Name)
+				cb.OnToolUse(tc.Name, tc.Arguments)
 			}
 
 			if def, ok := tools[tc.Name]; ok {
