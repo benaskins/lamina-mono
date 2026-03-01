@@ -50,6 +50,7 @@ func Run(ctx context.Context, client ChatClient, req *ChatRequest, tools map[str
 			Messages: messages,
 			Tools:    toolDefs,
 			Stream:   req.Stream,
+			Think:    req.Think,
 			Options:  req.Options,
 		}
 

@@ -29,6 +29,7 @@ type ChatRequest struct {
 	Messages []Message
 	Tools    []tool.ToolDef
 	Stream   bool
+	Think    *bool
 	Options  map[string]any
 }
 
