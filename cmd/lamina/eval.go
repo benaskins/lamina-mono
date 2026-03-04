@@ -10,7 +10,7 @@ import (
 	"os"
 	"time"
 
-	test "github.com/benaskins/axon-test"
+	eval "github.com/benaskins/axon-eval"
 	"github.com/spf13/cobra"
 )
 
@@ -29,29 +29,29 @@ func init() {
 func runEval(cmd *cobra.Command, args []string) error {
 	planPath := args[0]
 
-	plan, err := test.LoadPlan(planPath)
+	plan, err := eval.LoadPlan(planPath)
 	if err != nil {
 		return fmt.Errorf("load plan: %w", err)
 	}
 
-	cfg := test.Config{
+	cfg := eval.Config{
 		AuthURL:      envOrDefault("AUTH_URL", "https://auth.studio.internal"),
 		ChatURL:      envOrDefault("CHAT_URL", "https://chat.studio.internal"),
 		AnalyticsURL: envOrDefault("ANALYTICS_URL", "https://analytics.studio.internal"),
 	}
 
-	client, err := test.NewClient(cfg)
+	client, err := eval.NewClient(cfg)
 	if err != nil {
 		return fmt.Errorf("create client: %w", err)
 	}
 
 	// Set up optional LLM judge
-	var judge test.Judge
+	var judge eval.Judge
 	judgeModel := os.Getenv("JUDGE_MODEL")
 	if judgeModel != "" {
 		ollamaURL := envOrDefault("OLLAMA_URL", "http://localhost:11434")
 		generate := newOllamaTextGenerator(ollamaURL, judgeModel)
-		judge = test.NewOllamaJudge(generate)
+		judge = eval.NewOllamaJudge(generate)
 	}
 
 	fmt.Printf("━━━ %s ━━━\n", plan.Name)
@@ -61,9 +61,9 @@ func runEval(cmd *cobra.Command, args []string) error {
 	fmt.Println()
 
 	// Build scenarios from plan
-	scenarios := make([]test.Scenario, len(plan.Scenarios))
+	scenarios := make([]eval.Scenario, len(plan.Scenarios))
 	for i, ps := range plan.Scenarios {
-		scenarios[i] = test.Conversation(ps.Name, []test.Message{
+		scenarios[i] = eval.Conversation(ps.Name, []eval.Message{
 			{Role: "user", Content: ps.Message},
 		})
 	}
@@ -87,7 +87,7 @@ func runEval(cmd *cobra.Command, args []string) error {
 		}
 		chatResult := responses[len(responses)-1]
 
-		grade := test.GradeScenario(ps, chatResult, judge)
+		grade := eval.GradeScenario(ps, chatResult, judge)
 		printGrade(grade)
 
 		totalPassed += grade.Passed
@@ -105,7 +105,7 @@ func runEval(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func printGrade(grade *test.ScenarioGrade) {
+func printGrade(grade *eval.ScenarioGrade) {
 	fmt.Printf("  %s (%d/%d)\n", grade.Scenario, grade.Passed, grade.Total)
 	for _, r := range grade.Results {
 		status := "✓"
@@ -129,7 +129,7 @@ func envOrDefault(key, defaultVal string) string {
 }
 
 // newOllamaTextGenerator creates a TextGenerator that calls Ollama's /api/generate endpoint.
-func newOllamaTextGenerator(baseURL, model string) test.TextGenerator {
+func newOllamaTextGenerator(baseURL, model string) eval.TextGenerator {
 	return func(ctx context.Context, prompt string, temperature float64, maxTokens int) (string, error) {
 		httpClient := &http.Client{Timeout: 60 * time.Second}
 
