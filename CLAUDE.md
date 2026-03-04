@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Lamina is a **git repository** that serves as the monorepo root for a personal compute cluster running on a Mac Studio (Apple Silicon). It contains:
 
 1. The **`lamina` CLI** (`cmd/lamina/`) — a workspace management tool for coordinating across sub-repos
-2. **Go library modules** (`axon-agent/`, `axon-photo/`, `axon-tool/`) — shared modules tracked in this repo
+2. **Go library modules** (`axon-loop/`, `axon-lens/`, `axon-tool/`, `axon-eval/`) — independent repos living in this workspace (gitignored)
 3. **Independent sub-repos** — each has its own `.git` and is pushed to GitHub separately (gitignored here)
 
 ### Sub-repos (independent git repos, gitignored)
@@ -23,15 +23,16 @@ Lamina is a **git repository** that serves as the monorepo root for a personal c
 | **axon-gate** | Deploy gate service | Go |
 | **axon-memo** | Long-term memory extraction and consolidation service | Go |
 | **axon-task** | Task runner service | Go |
-| **axon-test** | Test library for running eval scenarios against the cluster | Go |
+| **axon-eval** | Evaluation framework for running scenario plans against the cluster | Go |
 
-### Modules in this repo (tracked by lamina git)
+### Library modules (independent repos in this workspace)
 
 | Module | Purpose |
 |--------|---------|
-| **axon-agent** | LLM conversation loop with tool calling |
-| **axon-photo** | Photo management with LLM-powered prompts |
-| **axon-tool** | Tool definition types for axon-agent |
+| **axon-loop** | LLM conversation loop with tool calling |
+| **axon-lens** | Photo/image management with LLM-powered prompts |
+| **axon-tool** | Tool definition types for axon-loop |
+| **axon-eval** | Evaluation framework for running scenario plans against the cluster |
 
 Each sub-repo has its own `CLAUDE.md` or `AGENTS.md`. When working in a sub-repo, read its project-level docs first.
 
