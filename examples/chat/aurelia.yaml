@@ -1,0 +1,24 @@
+service:
+  name: example-chat
+  type: native
+  command: ${AURELIA_ROOT}/bin/example-chat
+
+network:
+  port: 8080
+
+health:
+  type: http
+  path: /
+  interval: 10s
+  timeout: 2s
+
+restart:
+  policy: on-failure
+  max_attempts: 3
+  delay: 5s
+
+dependencies:
+  after: [ollama]
+
+env:
+  OLLAMA_HOST: "http://127.0.0.1:11434"
