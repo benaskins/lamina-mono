@@ -1,5 +1,13 @@
 # Lamina
 
+> **This software is designed for managing hobby compute environments on macOS. Nothing else.**
+>
+> Lamina exists to support experiments and research into autonomous LLM-backed agents on a private, sovereign server. It includes everything you'd need to treat that server like a production stack — monitoring, deployment, process supervision — but this is for education and exploration, not actual production use.
+>
+> You could use this to build self-modifying, self-deploying agents that reason about their own uptime, check whether the services they depend on are alive, and operate those services if needed. That's the point. The ACL and security model is weak right now and will improve over time.
+>
+> It is not built for scale. It's intended for a single user on macOS, working at the command line with tools like [Claude Code](https://docs.anthropic.com/en/docs/claude-code). No IDE integration, no GUI — just a shell.
+
 Lamina is the workspace and CLI for a personal compute cluster built on Go. It represents the system at rest — the modules, the configuration, the structure — and provides the tooling to manage it all.
 
 The workspace is deliberately decomposed into small, focused repos that an AI coding agent can reason about independently. Three layers make up the system:
