@@ -63,6 +63,12 @@ go get github.com/benaskins/axon-memo@latest
 
 Requires Go 1.24+.
 
+## A note on how this was built
+
+Lamina was designed by Ben Askins and built in collaboration with Claude,
+Anthropic's AI assistant. The architecture, taste, and decisions are human.
+The typing is fast.
+
 ## License
 
 All libraries are released under the MIT license.
