@@ -208,13 +208,22 @@ func checkVersionConsistency(root string) []Diagnostic {
 	}
 	versions := make(map[string][]versionUse)
 
-	aciCmd := filepath.Join(root, "aurelia-core-infrastructure", "cmd")
-	if svcEntries, err := os.ReadDir(aciCmd); err == nil {
+	// Scan all repos' cmd/* subdirectories for service modules
+	entries, _ := os.ReadDir(root)
+	for _, repoEntry := range entries {
+		if !repoEntry.IsDir() {
+			continue
+		}
+		cmdDir := filepath.Join(root, repoEntry.Name(), "cmd")
+		svcEntries, err := os.ReadDir(cmdDir)
+		if err != nil {
+			continue
+		}
 		for _, e := range svcEntries {
 			if !e.IsDir() {
 				continue
 			}
-			modPath := filepath.Join(aciCmd, e.Name(), "go.mod")
+			modPath := filepath.Join(cmdDir, e.Name(), "go.mod")
 			data, err := os.ReadFile(modPath)
 			if err != nil {
 				continue
@@ -273,21 +282,22 @@ func findAllGoMods(root string) []string {
 		if !e.IsDir() {
 			continue
 		}
-		modPath := filepath.Join(root, e.Name(), "go.mod")
+		repoDir := filepath.Join(root, e.Name())
+		modPath := filepath.Join(repoDir, "go.mod")
 		if _, err := os.Stat(modPath); err == nil {
 			goModPaths = append(goModPaths, modPath)
 		}
-	}
-
-	aciCmd := filepath.Join(root, "aurelia-core-infrastructure", "cmd")
-	if svcEntries, err := os.ReadDir(aciCmd); err == nil {
-		for _, e := range svcEntries {
-			if !e.IsDir() {
-				continue
-			}
-			modPath := filepath.Join(aciCmd, e.Name(), "go.mod")
-			if _, err := os.Stat(modPath); err == nil {
-				goModPaths = append(goModPaths, modPath)
+		// Scan cmd/* for nested service modules
+		cmdDir := filepath.Join(repoDir, "cmd")
+		if svcEntries, err := os.ReadDir(cmdDir); err == nil {
+			for _, se := range svcEntries {
+				if !se.IsDir() {
+					continue
+				}
+				svcMod := filepath.Join(cmdDir, se.Name(), "go.mod")
+				if _, err := os.Stat(svcMod); err == nil {
+					goModPaths = append(goModPaths, svcMod)
+				}
 			}
 		}
 	}

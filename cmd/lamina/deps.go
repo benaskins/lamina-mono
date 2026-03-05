@@ -56,7 +56,7 @@ func findModules(root string) ([]moduleDep, error) {
 
 	var goModPaths []string
 
-	// Find go.mod files: top-level repos and aurelia-core-infrastructure/cmd/*
+	// Find go.mod files in top-level repos and their cmd/* subdirectories
 	entries, err := os.ReadDir(root)
 	if err != nil {
 		return nil, err
@@ -65,22 +65,22 @@ func findModules(root string) ([]moduleDep, error) {
 		if !e.IsDir() {
 			continue
 		}
-		modPath := filepath.Join(root, e.Name(), "go.mod")
+		repoDir := filepath.Join(root, e.Name())
+		modPath := filepath.Join(repoDir, "go.mod")
 		if _, err := os.Stat(modPath); err == nil {
 			goModPaths = append(goModPaths, modPath)
 		}
-	}
-
-	// Also scan aurelia-core-infrastructure/cmd/* for service modules
-	aciCmd := filepath.Join(root, "aurelia-core-infrastructure", "cmd")
-	if svcEntries, err := os.ReadDir(aciCmd); err == nil {
-		for _, e := range svcEntries {
-			if !e.IsDir() {
-				continue
-			}
-			modPath := filepath.Join(aciCmd, e.Name(), "go.mod")
-			if _, err := os.Stat(modPath); err == nil {
-				goModPaths = append(goModPaths, modPath)
+		// Scan cmd/* for nested service modules
+		cmdDir := filepath.Join(repoDir, "cmd")
+		if svcEntries, err := os.ReadDir(cmdDir); err == nil {
+			for _, se := range svcEntries {
+				if !se.IsDir() {
+					continue
+				}
+				svcMod := filepath.Join(cmdDir, se.Name(), "go.mod")
+				if _, err := os.Stat(svcMod); err == nil {
+					goModPaths = append(goModPaths, svcMod)
+				}
 			}
 		}
 	}
