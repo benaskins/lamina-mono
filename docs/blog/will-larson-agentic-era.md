@@ -4,7 +4,7 @@ Two weeks ago I started building a personal compute platform on a Mac Studio. Fo
 
 One person. Fifteen calendar days of evenings and weekends. An AI coding partner.
 
-I built all of this in the margins — after putting the kids to bed, on Saturday mornings, between the work of directing engineering teams in my day job. That context matters, because the experience of doing both simultaneously is what made me rethink which engineering leadership ideas survive what's coming — specifically the ones in Will Larson's *An Elegant Puzzle* and *Staff Engineer*.
+I built all of this in the margins — weeknights and weekends, alongside my day job directing engineering teams. That context matters, because the experience of doing both simultaneously is what made me rethink which engineering leadership ideas survive what's coming — specifically the ones in Will Larson's *An Elegant Puzzle* and *Staff Engineer*.
 
 ## The arc
 
