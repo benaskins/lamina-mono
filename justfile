@@ -19,3 +19,22 @@ install-skills:
         ln -sfn "$(pwd)/$dir" ".claude/skills/$name"; \
     done
     @echo "Installed $(ls -1 skills/ | wc -l | tr -d ' ') skill(s) to .claude/skills/"
+
+# Clone, build, and install flux.swift (FLUX.1 image generation on Apple Silicon)
+install-flux:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    FLUX_DIR="$HOME/.local/src/flux.swift"
+    if [ ! -d "$FLUX_DIR" ]; then
+        echo "Cloning flux.swift..."
+        mkdir -p "$HOME/.local/src"
+        git clone https://github.com/filipstrand/flux.swift.git "$FLUX_DIR"
+    else
+        echo "Updating flux.swift..."
+        git -C "$FLUX_DIR" pull --ff-only
+    fi
+    echo "Building flux.swift (release)..."
+    cd "$FLUX_DIR"
+    swift build -c release
+    cp "$(swift build -c release --show-bin-path)/flux.swift" "$HOME/.local/bin/flux"
+    echo "Installed flux to ~/.local/bin/flux"
