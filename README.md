@@ -25,14 +25,14 @@ The workspace is deliberately decomposed into small, focused repos that an AI co
 | [axon-tool](https://github.com/benaskins/axon-tool) | Tool definition and execution primitives for LLM agents |
 | [axon-loop](https://github.com/benaskins/axon-loop) | Provider-agnostic conversation loop for LLM-powered agents |
 | [axon-talk](https://github.com/benaskins/axon-talk) | LLM provider adapters for axon-loop (Ollama, more to come) |
-| [axon-lens](https://github.com/benaskins/axon-lens) | LLM-based prompt merging for Stable Diffusion pipelines |
+| [axon-lens](https://github.com/benaskins/axon-lens) | Image generation pipeline — prompt merging, FLUX.1 via MLX, gallery storage |
 | [axon-auth](https://github.com/benaskins/axon-auth) | WebAuthn-based authentication with passkey registration, login, and session management |
 | [axon-chat](https://github.com/benaskins/axon-chat) | Chat service with LLM integration, tool calling, SSE streaming, and agent management |
 | [axon-eval](https://github.com/benaskins/axon-eval) | Evaluation framework for running scenario plans against a live service cluster |
 | [axon-gate](https://github.com/benaskins/axon-gate) | Deploy approval gate with Signal notifications and a review UI |
 | [axon-look](https://github.com/benaskins/axon-look) | Analytics event ingestion and querying backed by ClickHouse |
 | [axon-memo](https://github.com/benaskins/axon-memo) | Long-term memory extraction and consolidation for LLM agents |
-| [axon-task](https://github.com/benaskins/axon-task) | Asynchronous task runner for Claude Code sessions and image generation |
+| [axon-task](https://github.com/benaskins/axon-task) | Generic asynchronous task runner with pluggable workers |
 
 ## How they fit together
 
@@ -51,7 +51,7 @@ Libraries (no service dependencies):
   axon-tool    ─── tool definitions for LLM agents
   axon-loop    ─── conversation loop (depends on axon-tool)
   axon-talk    ─── LLM provider adapters (depends on axon-loop)
-  axon-lens    ─── image pipeline (depends on axon-loop)
+  axon-lens    ─── image pipeline (depends on axon-tool)
 
 Services (built from libraries):
   axon-auth    ─── authentication (axon)
@@ -124,6 +124,29 @@ go get github.com/benaskins/axon-memo@latest
 ```
 
 Requires Go 1.25+.
+
+## Slop guard
+
+Every repo is checked by [slop-guard](https://github.com/benaskins/dotfiles/blob/master/scripts/slop-guard) — a bash script that catches AI-generated filler words and comment patterns in source files. It runs as a pre-commit hook and as a Claude Code post-tool-use hook.
+
+Last full scan: **2026-03-06** — 0 issues across all repos.
+
+| Repo | Status |
+|------|--------|
+| lamina | clean |
+| aurelia | clean |
+| axon | clean |
+| axon-auth | clean |
+| axon-chat | clean |
+| axon-eval | clean |
+| axon-gate | clean |
+| axon-lens | clean |
+| axon-look | clean |
+| axon-loop | clean |
+| axon-memo | clean |
+| axon-talk | clean |
+| axon-task | clean |
+| axon-tool | clean |
 
 ## A note on how this was built
 
