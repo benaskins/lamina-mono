@@ -2,9 +2,9 @@
 
 Two weeks ago I started building a personal compute platform on a Mac Studio. Fourteen repositories, 47,000 lines of Go, a process supervisor with macOS launchd integration, eight web services, three SvelteKit frontends, an LLM conversation loop with tool calling, WebAuthn authentication, analytics, long-term memory for agents, an evaluation framework, and a workspace CLI to hold it all together.
 
-One person. Fifteen calendar days. An AI coding partner.
+One person. Fifteen calendar days of evenings and weekends. An AI coding partner.
 
-That experience made me rethink which engineering leadership ideas survive what's coming — specifically the ones in Will Larson's *An Elegant Puzzle* and *Staff Engineer*.
+I built all of this in the margins — after putting the kids to bed, on Saturday mornings, between the work of directing engineering teams in my day job. That context matters, because the experience of doing both simultaneously is what made me rethink which engineering leadership ideas survive what's coming — specifically the ones in Will Larson's *An Elegant Puzzle* and *Staff Engineer*.
 
 ## The arc
 
@@ -34,7 +34,7 @@ When I told the agents "don't make significant design decisions without me," I w
 
 The parts of Larson's work rooted in human coordination translate less directly. His team sizing models — six to eight engineers, shaped by communication overhead — assume human bandwidth constraints. My "team" on Friday was seven agents running in parallel with zero coordination cost. The constraint wasn't headcount. It was context quality: how well I scoped each agent's task.
 
-Sprint planning, velocity tracking, story points — these were always proxies for "how much can this group of humans accomplish in a fixed time?" Lamina's development didn't have sprints. It had conversations. Each conversation produced working software, often spanning disciplines that would require different specialists on a traditional team. The project-scale doc estimates 1,400–2,000 person-hours if staffed conventionally — three senior engineers for a quarter. It took one person fifteen days, not by working harder, but by spending nearly all their time on decisions.
+Sprint planning, velocity tracking, story points — these were always proxies for "how much can this group of humans accomplish in a fixed time?" Lamina's development didn't have sprints. It had conversations. Each conversation produced working software, often spanning disciplines that would require different specialists on a traditional team. The project-scale doc estimates 1,400–2,000 person-hours if staffed conventionally — three senior engineers for a quarter. It took one person's evenings and weekends over fifteen days — maybe forty hours of actual work — not by working harder, but by spending nearly all that time on decisions.
 
 Career growth conversations, skip-levels, reorg management — agents don't need any of it. The management overhead that Larson thoughtfully addresses simply doesn't exist when your collaborators are stateless processes.
 
