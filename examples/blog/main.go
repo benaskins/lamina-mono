@@ -11,7 +11,7 @@
 // Export to static files for Cloudflare Pages:
 //
 //	go run . -content ./content -export ./dist
-//	npx wrangler pages deploy ./dist --project-name=my-blog
+//	wrangler pages deploy ./dist --project-name=my-blog
 //
 // Then open http://localhost:8080
 package main
