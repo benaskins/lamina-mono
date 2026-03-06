@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ .Title }}</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="alternate" type="application/atom+xml" title="Feed" href="/feed.xml">
+</head>
+<body>
+  <header>
+    <h1><a href="/">{{ .Site.Title }}</a></h1>
+  </header>
+  <main>
+    <article>
+      <header class="post-header">
+        <h2>{{ .Post.Title }}</h2>
+        <time datetime="{{ isoDate .Post.Date }}">{{ formatDate .Post.Date }}</time>
+        {{ if .Post.Tags }}
+        <ul class="tags">
+          {{ range .Post.Tags }}<li>{{ . }}</li>{{ end }}
+        </ul>
+        {{ end }}
+      </header>
+      <div class="post-content">
+        {{ .Post.Content }}
+      </div>
+    </article>
+    <nav class="back">
+      <a href="/">&larr; all posts</a>
+    </nav>
+  </main>
+</body>
+</html>

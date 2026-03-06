@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>{{ .Site.Title }}</title>
+  <link href="{{ .Site.BaseURL }}/" rel="alternate"/>
+  <link href="{{ .Site.BaseURL }}/feed.xml" rel="self"/>
+  <id>{{ .Site.BaseURL }}/</id>
+  {{ if .Posts }}<updated>{{ isoDate (index .Posts 0).Date }}</updated>{{ end }}
+  {{ range .Posts }}
+  <entry>
+    <title>{{ .Title }}</title>
+    <link href="{{ $.Site.BaseURL }}/posts/{{ .Slug }}" rel="alternate"/>
+    <id>{{ $.Site.BaseURL }}/posts/{{ .Slug }}</id>
+    <published>{{ isoDate .Date }}</published>
+    <updated>{{ isoDate .Date }}</updated>
+    {{ if .Summary }}<summary>{{ .Summary }}</summary>{{ end }}
+  </entry>
+  {{ end }}
+</feed>
