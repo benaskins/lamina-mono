@@ -23,6 +23,8 @@ repos:
     url: https://github.com/benaskins/axon-memo.git
   - name: axon-mind
     url: https://github.com/benaskins/axon-mind.git
+  - name: axon-nats
+    url: https://github.com/benaskins/axon-nats.git
   - name: axon-talk
     url: https://github.com/benaskins/axon-talk.git
   - name: axon-task
