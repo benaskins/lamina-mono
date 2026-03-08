@@ -21,6 +21,8 @@ repos:
     url: https://github.com/benaskins/axon-loop.git
   - name: axon-memo
     url: https://github.com/benaskins/axon-memo.git
+  - name: axon-mind
+    url: https://github.com/benaskins/axon-mind.git
   - name: axon-talk
     url: https://github.com/benaskins/axon-talk.git
   - name: axon-task
