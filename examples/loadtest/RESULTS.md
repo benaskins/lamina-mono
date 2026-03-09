@@ -58,7 +58,8 @@ later instances due to ephemeral port exhaustion (16k range, 30s TIME_WAIT).
 After tuning (wider port range, 5s TIME_WAIT, raised fd limits), all
 instances held steady at ~50k req/s.
 
-See `scripts/tune-macos.sh` for the specific settings.
+Settings: `net.inet.ip.portrange.first=1024`, `net.inet.tcp.msl=5000`,
+`kern.maxfiles=65536`, `ulimit -n 65536`.
 
 ## Key findings
 
