@@ -40,7 +40,7 @@ func runHeal(cmd *cobra.Command, args []string) error {
 	var actions []Diagnostic
 	for _, d := range diags {
 		switch d.Kind {
-		case "untagged", "ahead-of-tag":
+		case "untagged", "ahead-of-tag", "agent-docs-missing":
 			actions = append(actions, d)
 		}
 	}
@@ -58,6 +58,10 @@ func runHeal(cmd *cobra.Command, args []string) error {
 			}
 		case "ahead-of-tag":
 			if err := healAheadOfTag(d, dryRun); err != nil {
+				fmt.Printf("  FAIL %s: %v\n", d.Name, err)
+			}
+		case "agent-docs-missing":
+			if err := healAgentDocs(d, dryRun); err != nil {
 				fmt.Printf("  FAIL %s: %v\n", d.Name, err)
 			}
 		}
@@ -148,6 +152,52 @@ func healAheadOfTag(d Diagnostic, dryRun bool) error {
 		return fmt.Errorf("git push: %w", err)
 	}
 	fmt.Printf("  Released %s %s\n", d.Name, nextTag)
+	return nil
+}
+
+const claudeMDPointer = "# CLAUDE.md\n\nRead [AGENTS.md](./AGENTS.md) for project context.\n"
+
+func healAgentDocs(d Diagnostic, dryRun bool) error {
+	if d.Dir == "" {
+		return fmt.Errorf("no directory in diagnostic")
+	}
+
+	name := strings.TrimSuffix(d.Name, " docs")
+	claudePath := d.Dir + "/CLAUDE.md"
+	agentsPath := d.Dir + "/AGENTS.md"
+
+	// Create AGENTS.md if missing
+	if _, err := os.Stat(agentsPath); err != nil {
+		if dryRun {
+			fmt.Printf("  [dry-run] would create %s/AGENTS.md\n", name)
+		} else {
+			content := fmt.Sprintf("# %s\n\n## Build & Test\n\n```bash\ngo test ./...\ngo vet ./...\n```\n", name)
+			if err := os.WriteFile(agentsPath, []byte(content), 0644); err != nil {
+				return fmt.Errorf("writing AGENTS.md: %w", err)
+			}
+			fmt.Printf("  Created %s/AGENTS.md\n", name)
+		}
+	}
+
+	// Create or fix CLAUDE.md
+	needsClaude := false
+	if data, err := os.ReadFile(claudePath); err != nil {
+		needsClaude = true
+	} else if !strings.Contains(string(data), "AGENTS.md") {
+		needsClaude = true
+	}
+
+	if needsClaude {
+		if dryRun {
+			fmt.Printf("  [dry-run] would create %s/CLAUDE.md pointing to AGENTS.md\n", name)
+		} else {
+			if err := os.WriteFile(claudePath, []byte(claudeMDPointer), 0644); err != nil {
+				return fmt.Errorf("writing CLAUDE.md: %w", err)
+			}
+			fmt.Printf("  Created %s/CLAUDE.md\n", name)
+		}
+	}
+
 	return nil
 }
 
