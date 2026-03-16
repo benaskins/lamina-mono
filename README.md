@@ -33,7 +33,7 @@ The workspace is decomposed into small, focused repos that an AI coding agent ca
 | [axon-talk](https://github.com/benaskins/axon-talk) | LLM provider adapters for axon-loop (Ollama, more to come) |
 | [axon-fact](https://github.com/benaskins/axon-fact) | Event sourcing primitives — Event type, EventStore/Projector/Publisher interfaces |
 | [axon-mind](https://github.com/benaskins/axon-mind) | Embedded Prolog engine for structured inference over facts and rules |
-| [axon-nats](https://github.com/benaskins/axon-nats) | NATS adapters for axon services — EventBus[T] for horizontal scaling |
+| [axon-nats](https://github.com/benaskins/axon-nats) | NATS adapters for axon services — EventBus[T] for cross-instance fan-out |
 | [axon-lens](https://github.com/benaskins/axon-lens) | Image generation pipeline — prompt merging, FLUX.1 via MLX, gallery storage |
 
 **Domain packages**
@@ -51,7 +51,7 @@ The workspace is decomposed into small, focused repos that an AI coding agent ca
 
 | Repo | Description |
 |------|-------------|
-| [aurelia](https://github.com/benaskins/aurelia) | macOS-native process supervisor for native processes and Docker containers |
+| [aurelia](https://github.com/benaskins/aurelia) | Process supervisor for native processes and Docker containers, with macOS-specific enhancements |
 | [axon-eval](https://github.com/benaskins/axon-eval) | Evaluation framework for running scenario plans against a live service cluster |
 
 ## How they fit together

@@ -16,7 +16,7 @@ The workspace is populated by `lamina init`, which clones all sub-repos into thi
 
 | Repo | Purpose |
 |------|---------|
-| **aurelia** | macOS-native process supervisor for native processes and Docker containers |
+| **aurelia** | Process supervisor for native processes and Docker containers, with macOS-specific enhancements |
 | **axon** | Shared Go toolkit for AI-powered web services (HTTP lifecycle, auth, SSE, streaming) |
 | **axon-auth** | WebAuthn-based authentication with passkey registration, login, and session management |
 | **axon-chat** | Chat service with LLM integration, tool calling, SSE streaming, and agent management |
@@ -28,7 +28,7 @@ The workspace is populated by `lamina init`, which clones all sub-repos into thi
 | **axon-loop** | Provider-agnostic conversation loop for LLM-powered agents |
 | **axon-memo** | Long-term memory extraction and consolidation for LLM agents |
 | **axon-mind** | Embedded Prolog engine for structured inference over facts and rules |
-| **axon-nats** | NATS adapters for axon services — EventBus[T] for horizontal scaling |
+| **axon-nats** | NATS adapters for axon services — EventBus[T] for cross-instance fan-out |
 | **axon-talk** | LLM provider adapters for axon-loop (Ollama, more to come) |
 | **axon-task** | Generic asynchronous task runner with pluggable workers |
 | **axon-tool** | Tool definition and execution primitives for LLM agents |
