@@ -18,6 +18,7 @@ var doctorCmd = &cobra.Command{
   - Flag modules with unpublished changes vs their latest tag
   - Check go.mod versions match what's available on GitHub
   - Detect missing or broken cross-repo dependencies
+  - Check repos have AGENTS.md and CLAUDE.md
 
 Use --json for machine-readable output (pipeable to lamina heal).`,
 	RunE: runDoctor,
@@ -85,6 +86,7 @@ func runDiagnostics(root string) []Diagnostic {
 	diags = append(diags, checkReplaceDirectives(root)...)
 	diags = append(diags, checkUntaggedModules(root)...)
 	diags = append(diags, checkVersionConsistency(root)...)
+	diags = append(diags, checkAgentDocs(root)...)
 	return diags
 }
 
@@ -272,6 +274,47 @@ func checkVersionConsistency(root string) []Diagnostic {
 		}
 	}
 
+	return diags
+}
+
+func checkAgentDocs(root string) []Diagnostic {
+	var diags []Diagnostic
+	entries, _ := os.ReadDir(root)
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		dir := filepath.Join(root, e.Name())
+		if _, err := os.Stat(filepath.Join(dir, ".git")); err != nil {
+			continue
+		}
+
+		hasAgents := false
+		hasClaude := false
+		claudePoints := false
+
+		if _, err := os.Stat(filepath.Join(dir, "AGENTS.md")); err == nil {
+			hasAgents = true
+		}
+		if data, err := os.ReadFile(filepath.Join(dir, "CLAUDE.md")); err == nil {
+			hasClaude = true
+			claudePoints = strings.Contains(string(data), "AGENTS.md")
+		}
+
+		name := e.Name() + " docs"
+		switch {
+		case hasAgents && hasClaude && claudePoints:
+			diags = append(diags, Diagnostic{Kind: "agent-docs-ok", Name: name, Status: "ok", Message: "AGENTS.md + CLAUDE.md", Dir: dir})
+		case !hasAgents && !hasClaude:
+			diags = append(diags, Diagnostic{Kind: "agent-docs-missing", Name: name, Status: "warn", Message: "missing AGENTS.md and CLAUDE.md", Dir: dir})
+		case !hasAgents:
+			diags = append(diags, Diagnostic{Kind: "agent-docs-missing", Name: name, Status: "warn", Message: "missing AGENTS.md", Dir: dir})
+		case !hasClaude:
+			diags = append(diags, Diagnostic{Kind: "agent-docs-missing", Name: name, Status: "warn", Message: "missing CLAUDE.md", Dir: dir})
+		case !claudePoints:
+			diags = append(diags, Diagnostic{Kind: "agent-docs-missing", Name: name, Status: "warn", Message: "CLAUDE.md does not reference AGENTS.md", Dir: dir})
+		}
+	}
 	return diags
 }
 
