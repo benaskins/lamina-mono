@@ -1,11 +1,11 @@
 ---
-name: lamina-workspace
-description: Use when you need to understand the lamina workspace layout, check repo health, or investigate cross-repo dependency issues. Extends /ground with lamina-specific tools.
+name: ground-lamina
+description: Use when grounding in the lamina workspace. Extends /ground with lamina-specific tools.
 ---
 
-# Lamina Workspace
+# Ground Lamina
 
-Extends `/ground` with lamina workspace intelligence. Use when navigating between repos, checking health, or diagnosing dependency problems.
+Follow `/ground` — here's how to orient in the lamina workspace.
 
 ## Orientation
 
