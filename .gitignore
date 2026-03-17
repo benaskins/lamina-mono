@@ -7,6 +7,9 @@ axon-*/
 # Design docs (local working artifacts, not committed)
 docs/plans/
 
+# Private facts (Prolog knowledge bases, not published)
+facts/
+
 # Build output
 bin/
 /lamina
