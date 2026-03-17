@@ -10,6 +10,9 @@ docs/plans/
 # Private facts (Prolog knowledge bases, not published)
 facts/
 
+# Dependencies
+node_modules/
+
 # Build output
 bin/
 /lamina
