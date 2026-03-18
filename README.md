@@ -30,7 +30,8 @@ The workspace is decomposed into small, focused repos that an AI coding agent ca
 |------|-------------|
 | [axon-tool](https://github.com/benaskins/axon-tool) | Tool definition and execution primitives for LLM agents |
 | [axon-loop](https://github.com/benaskins/axon-loop) | Provider-agnostic conversation loop for LLM-powered agents |
-| [axon-talk](https://github.com/benaskins/axon-talk) | LLM provider adapters for axon-loop (Ollama, more to come) |
+| [axon-talk](https://github.com/benaskins/axon-talk) | LLM provider adapters for axon-loop (Ollama, Cloudflare Workers AI) |
+| [axon-wire](https://github.com/benaskins/axon-wire) | HTTP transport that routes outbound requests through a Cloudflare Worker proxy |
 | [axon-fact](https://github.com/benaskins/axon-fact) | Event sourcing primitives — Event type, EventStore/Projector/Publisher interfaces |
 | [axon-mind](https://github.com/benaskins/axon-mind) | Embedded Prolog engine for structured inference over facts and rules |
 | [axon-nats](https://github.com/benaskins/axon-nats) | NATS adapters for axon services — EventBus[T] for cross-instance fan-out |
@@ -46,6 +47,7 @@ The workspace is decomposed into small, focused repos that an AI coding agent ca
 | [axon-look](https://github.com/benaskins/axon-look) | Analytics event ingestion and querying backed by ClickHouse |
 | [axon-memo](https://github.com/benaskins/axon-memo) | Long-term memory extraction and consolidation for LLM agents |
 | [axon-task](https://github.com/benaskins/axon-task) | Generic asynchronous task runner with pluggable workers |
+| [axon-synd](https://github.com/benaskins/axon-synd) | Personal syndication engine — publish to a static site, syndicate to Bluesky, Mastodon, Threads |
 
 **Standalone tools**
 
@@ -73,6 +75,7 @@ Primitives:
   axon-tool    ─── tool definitions for LLM agents
   axon-loop    ─── conversation loop (depends on axon-tool)
   axon-talk    ─── LLM provider adapters (depends on axon-loop)
+  axon-wire    ─── HTTP proxy transport (no dependencies)
   axon-fact    ─── event sourcing primitives (no dependencies)
   axon-mind    ─── embedded Prolog engine (no dependencies)
   axon-nats    ─── NATS adapters (depends on axon)
@@ -85,6 +88,7 @@ Domain packages (handlers, stores, types — no main of their own):
   axon-look    ─── analytics (axon)
   axon-memo    ─── long-term memory (axon)
   axon-task    ─── task runner (axon)
+  axon-synd    ─── syndication engine (axon, axon-fact, axon-gate)
 
 Standalone tools:
   aurelia      ─── process supervisor
@@ -176,8 +180,10 @@ Last full scan: **2026-03-06** — 0 issues across all repos.
 | axon-fact | clean |
 | axon-mind | clean |
 | axon-nats | clean |
+| axon-synd | clean |
 | axon-task | clean |
 | axon-tool | clean |
+| axon-wire | clean |
 
 ## A note on how this was built
 

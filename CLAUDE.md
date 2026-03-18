@@ -29,9 +29,11 @@ The workspace is populated by `lamina init`, which clones all sub-repos into thi
 | **axon-memo** | Long-term memory extraction and consolidation for LLM agents |
 | **axon-mind** | Embedded Prolog engine for structured inference over facts and rules |
 | **axon-nats** | NATS adapters for axon services — EventBus[T] for cross-instance fan-out |
-| **axon-talk** | LLM provider adapters for axon-loop (Ollama, more to come) |
+| **axon-synd** | Personal syndication engine — publish to a static site, syndicate to Bluesky, Mastodon, Threads |
+| **axon-talk** | LLM provider adapters for axon-loop (Ollama, Cloudflare Workers AI) |
 | **axon-task** | Generic asynchronous task runner with pluggable workers |
 | **axon-tool** | Tool definition and execution primitives for LLM agents |
+| **axon-wire** | HTTP transport that routes outbound requests through a Cloudflare Worker proxy |
 
 Each sub-repo has its own `CLAUDE.md` or `AGENTS.md`. When working in a sub-repo, read its project-level docs first.
 
@@ -60,6 +62,7 @@ axon         ─── server lifecycle, auth, SSE, metrics
 axon-tool    ─── tool definitions for LLM agents
 axon-loop    ─── conversation loop (depends on axon-tool)
 axon-talk    ─── LLM provider adapters (depends on axon-loop)
+axon-wire    ─── HTTP proxy transport (no dependencies)
 axon-lens    ─── image pipeline (depends on axon-tool)
 axon-fact    ─── event sourcing primitives (no dependencies)
 axon-mind    ─── embedded Prolog engine (no dependencies)
@@ -74,6 +77,7 @@ axon-gate    ─── deploy approval gate (axon)
 axon-look    ─── analytics (axon)
 axon-memo    ─── long-term memory (axon)
 axon-task    ─── task runner (axon)
+axon-synd    ─── syndication engine (axon, axon-fact, axon-gate)
 ```
 
 Standalone:
