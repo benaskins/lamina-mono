@@ -1,5 +1,35 @@
 version := `git describe --tags --always --dirty 2>/dev/null || echo dev`
 
+# Clone sub-repos from repos.yaml (no lamina binary required)
+bootstrap:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    name="" url=""
+    pids=()
+    while IFS= read -r line; do
+        if [[ "$line" =~ name:\ (.+) ]]; then name="${BASH_REMATCH[1]}"; fi
+        if [[ "$line" =~ url:\ (.+) ]]; then url="${BASH_REMATCH[1]}"; fi
+        if [ -n "$name" ] && [ -n "$url" ]; then
+            if [ -d "$name/.git" ]; then
+                echo "  [ok] $name"
+            else
+                echo "  [clone] $name"
+                git clone "$url" "$name" &
+                pids+=($!)
+            fi
+            name="" url=""
+        fi
+    done < repos.yaml
+    failed=0
+    for pid in "${pids[@]+"${pids[@]}"}"; do
+        wait "$pid" || ((failed++))
+    done
+    if [ "$failed" -gt 0 ]; then
+        echo "Bootstrap finished with $failed failed clone(s)"
+        exit 1
+    fi
+    echo "Bootstrap complete — run 'just install' next"
+
 build:
     go build -ldflags "-X main.version={{version}}" -o bin/lamina ./cmd/lamina/
 
