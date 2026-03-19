@@ -33,3 +33,5 @@ repos:
     url: https://github.com/benaskins/axon-task.git
   - name: axon-tool
     url: https://github.com/benaskins/axon-tool.git
+  - name: axon-wire
+    url: https://github.com/benaskins/axon-wire.git
