@@ -213,6 +213,19 @@ func streamGit(dir string, args ...string) error {
 // resolveRepoDir validates that name is a git repo under root.
 func resolveRepoDir(root, name string) (string, error) {
 	dir := filepath.Join(root, name)
+
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return "", fmt.Errorf("cannot resolve workspace root: %w", err)
+	}
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		return "", fmt.Errorf("cannot resolve repo path: %w", err)
+	}
+	if !strings.HasPrefix(absDir, absRoot+string(os.PathSeparator)) {
+		return "", fmt.Errorf("repo name %q escapes workspace root", name)
+	}
+
 	info, err := os.Stat(dir)
 	if err != nil || !info.IsDir() {
 		return "", fmt.Errorf("repo %q not found in workspace", name)
