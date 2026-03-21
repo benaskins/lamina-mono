@@ -1,8 +1,29 @@
+diff --git a/agent.go b/agent.go
+index fda2abc..0cd9484 100644
+--- a/agent.go
++++ b/agent.go
+@@ -66,10 +66,16 @@ type Event struct {
+ 	Token    string            // incremental content token
+ 	Thinking string            // incremental thinking token
+ 	ToolUse  *ToolUseEvent     // a tool was invoked
++	Trim     *TrimEvent        // context was trimmed
+ 	Done     *DoneEvent        // the loop completed
+ 	Err      error             // the loop failed
+ }
+ 
++// TrimEvent is emitted when the context strategy drops messages.
++type TrimEvent struct {
++	Dropped []Message
++}
++
+ // ToolUseEvent is emitted when the LLM invokes a tool.
+ type ToolUseEvent struct {
+ 	Name string
 diff --git a/context.go b/context.go
-index df3ef36..047a9f5 100644
+index df3ef36..51ed528 100644
 --- a/context.go
 +++ b/context.go
-@@ -2,6 +2,68 @@ package loop
+@@ -2,6 +2,91 @@ package loop
  
  import "log/slog"
  
@@ -68,14 +89,37 @@ index df3ef36..047a9f5 100644
 +	})
 +}
 +
++// droppedMessages computes which messages were removed by trimming.
++// Assumes strategies preserve the system prompt and trim a contiguous
++// prefix of the conversation (the pattern used by all built-in strategies).
++func droppedMessages(original, trimmed []Message) []Message {
++	if len(trimmed) >= len(original) {
++		return nil
++	}
++
++	start := 0
++	if len(original) > 0 && original[0].Role == RoleSystem {
++		start = 1
++	}
++
++	trimCount := len(original) - len(trimmed)
++	if trimCount <= 0 {
++		return nil
++	}
++
++	dropped := make([]Message, trimCount)
++	copy(dropped, original[start:start+trimCount])
++	return dropped
++}
++
  // estimateTokens returns a rough token count for a string.
  // Uses the ~4 characters per token heuristic common across
  // LLM tokenizers. Not precise, but good enough for budgeting.
 diff --git a/context_test.go b/context_test.go
-index 419fcf7..93b2b3b 100644
+index 419fcf7..a6a2051 100644
 --- a/context_test.go
 +++ b/context_test.go
-@@ -145,3 +145,113 @@ func TestMessageTokens_IncludesToolCalls(t *testing.T) {
+@@ -145,3 +145,146 @@ func TestMessageTokens_IncludesToolCalls(t *testing.T) {
  		t.Errorf("expected tool call message to have >10 tokens, got %d", tokens)
  	}
  }
@@ -172,7 +216,6 @@ index 419fcf7..93b2b3b 100644
 +}
 +
 +func TestContextStrategyFunc(t *testing.T) {
-+	// Verify the adapter works
 +	called := false
 +	strategy := ContextStrategyFunc(func(msgs []Message) []Message {
 +		called = true
@@ -189,11 +232,53 @@ index 419fcf7..93b2b3b 100644
 +		t.Errorf("expected 1 message, got %d", len(result))
 +	}
 +}
++
++func TestDroppedMessages_WithSystemPrompt(t *testing.T) {
++	original := []Message{
++		{Role: "system", Content: "sys"},
++		{Role: "user", Content: "old1"},
++		{Role: "assistant", Content: "old2"},
++		{Role: "user", Content: "recent"},
++	}
++	trimmed := []Message{
++		{Role: "system", Content: "sys"},
++		{Role: "user", Content: "recent"},
++	}
++
++	dropped := droppedMessages(original, trimmed)
++	if len(dropped) != 2 {
++		t.Fatalf("expected 2 dropped, got %d", len(dropped))
++	}
++	if dropped[0].Content != "old1" {
++		t.Errorf("dropped[0] = %q, want old1", dropped[0].Content)
++	}
++	if dropped[1].Content != "old2" {
++		t.Errorf("dropped[1] = %q, want old2", dropped[1].Content)
++	}
++}
++
++func TestDroppedMessages_NoTrimming(t *testing.T) {
++	msgs := []Message{
++		{Role: "user", Content: "hello"},
++	}
++	dropped := droppedMessages(msgs, msgs)
++	if len(dropped) != 0 {
++		t.Errorf("expected 0 dropped when no trimming, got %d", len(dropped))
++	}
++}
 diff --git a/run.go b/run.go
-index 91a9825..69e1afe 100644
+index 91a9825..1ed0551 100644
 --- a/run.go
 +++ b/run.go
-@@ -32,6 +32,7 @@ type RunConfig struct {
+@@ -17,6 +17,7 @@ type Callbacks struct {
+ 	OnToken    func(token string)
+ 	OnThinking func(token string)
+ 	OnToolUse  func(name string, args map[string]any)
++	OnTrim     func(dropped []Message) // Called when context trimming drops messages.
+ 	OnDone     func(durationMs int64)
+ }
+ 
+@@ -32,6 +33,7 @@ type RunConfig struct {
  	Request *Request
  	Tools   map[string]tool.ToolDef
  	ToolCtx *tool.ToolContext
@@ -201,7 +286,17 @@ index 91a9825..69e1afe 100644
  	Callbacks
  }
  
-@@ -94,8 +95,14 @@ func Run(ctx context.Context, cfg RunConfig) (*Result, error) {
+@@ -63,6 +65,9 @@ func Stream(ctx context.Context, client LLMClient, req *Request, tools map[strin
+ 				OnToolUse: func(name string, args map[string]any) {
+ 					ch <- Event{ToolUse: &ToolUseEvent{Name: name, Args: args}}
+ 				},
++				OnTrim: func(dropped []Message) {
++					ch <- Event{Trim: &TrimEvent{Dropped: dropped}}
++				},
+ 				OnDone: func(ms int64) {
+ 					durationMs = ms
+ 				},
+@@ -94,8 +99,14 @@ func Run(ctx context.Context, cfg RunConfig) (*Result, error) {
  	req := cfg.Request
  	tools := cfg.Tools
  	toolCtx := cfg.ToolCtx
@@ -216,7 +311,7 @@ index 91a9825..69e1afe 100644
  	start := time.Now()
  	messages := make([]Message, len(req.Messages))
  	copy(messages, req.Messages)
-@@ -129,10 +136,10 @@ func Run(ctx context.Context, cfg RunConfig) (*Result, error) {
+@@ -129,10 +140,13 @@ func Run(ctx context.Context, cfg RunConfig) (*Result, error) {
  		if iterations > maxIter {
  			return nil, fmt.Errorf("max iterations (%d) exceeded", maxIter)
  		}
@@ -227,6 +322,168 @@ index 91a9825..69e1afe 100644
 -			sendMessages = trimToTokenBudget(messages, req.MaxTokens)
 +		if ctxStrategy != nil {
 +			sendMessages = ctxStrategy.Trim(messages)
++			if cb.OnTrim != nil && len(sendMessages) < len(messages) {
++				cb.OnTrim(droppedMessages(messages, sendMessages))
++			}
  		}
  
  		chatReq := &Request{
+diff --git a/run_test.go b/run_test.go
+index cc2a93b..3b43c5f 100644
+--- a/run_test.go
++++ b/run_test.go
+@@ -514,6 +514,154 @@ func TestRunMultiToolCallsInSingleTurn(t *testing.T) {
+ 	}
+ }
+ 
++func TestRunWithContextStrategy(t *testing.T) {
++	// Use a spy to verify trimmed messages reach the client.
++	var receivedMsgCount int
++	client := &spyClient{
++		onChat: func(req *loop.Request) {
++			receivedMsgCount = len(req.Messages)
++		},
++		responses: []loop.Response{
++			{Content: "ok", Done: true},
++		},
++	}
++
++	_, err := loop.Run(context.Background(), loop.RunConfig{
++		Client: client,
++		Request: &loop.Request{
++			Model: "test",
++			Messages: []loop.Message{
++				{Role: loop.RoleSystem, Content: "system"},
++				{Role: loop.RoleUser, Content: "old1"},
++				{Role: loop.RoleAssistant, Content: "old2"},
++				{Role: loop.RoleUser, Content: "old3"},
++				{Role: loop.RoleAssistant, Content: "old4"},
++				{Role: loop.RoleUser, Content: "recent"},
++			},
++		},
++		Context: loop.SlidingWindow(2),
++	})
++
++	if err != nil {
++		t.Fatal(err)
++	}
++	// system + last 2 conversation messages
++	if receivedMsgCount != 3 {
++		t.Errorf("client received %d messages, want 3 (system + 2 recent)", receivedMsgCount)
++	}
++}
++
++func TestRunOnTrimCallback(t *testing.T) {
++	client := &stubClient{
++		responses: []loop.Response{
++			{Content: "ok", Done: true},
++		},
++	}
++
++	var trimmedMsgs []loop.Message
++	_, err := loop.Run(context.Background(), loop.RunConfig{
++		Client: client,
++		Request: &loop.Request{
++			Model: "test",
++			Messages: []loop.Message{
++				{Role: loop.RoleSystem, Content: "system"},
++				{Role: loop.RoleUser, Content: "drop-me-1"},
++				{Role: loop.RoleAssistant, Content: "drop-me-2"},
++				{Role: loop.RoleUser, Content: "keep"},
++			},
++		},
++		Context: loop.SlidingWindow(1),
++		Callbacks: loop.Callbacks{
++			OnTrim: func(dropped []loop.Message) {
++				trimmedMsgs = dropped
++			},
++		},
++	})
++
++	if err != nil {
++		t.Fatal(err)
++	}
++	if len(trimmedMsgs) != 2 {
++		t.Fatalf("OnTrim received %d messages, want 2", len(trimmedMsgs))
++	}
++	if trimmedMsgs[0].Content != "drop-me-1" {
++		t.Errorf("dropped[0] = %q, want drop-me-1", trimmedMsgs[0].Content)
++	}
++	if trimmedMsgs[1].Content != "drop-me-2" {
++		t.Errorf("dropped[1] = %q, want drop-me-2", trimmedMsgs[1].Content)
++	}
++}
++
++func TestRunOnTrimNotCalledWhenNoTrimming(t *testing.T) {
++	client := &stubClient{
++		responses: []loop.Response{
++			{Content: "ok", Done: true},
++		},
++	}
++
++	trimCalled := false
++	_, err := loop.Run(context.Background(), loop.RunConfig{
++		Client: client,
++		Request: &loop.Request{
++			Model: "test",
++			Messages: []loop.Message{
++				{Role: loop.RoleUser, Content: "hello"},
++			},
++		},
++		Context: loop.SlidingWindow(10), // window bigger than history
++		Callbacks: loop.Callbacks{
++			OnTrim: func(dropped []loop.Message) {
++				trimCalled = true
++			},
++		},
++	})
++
++	if err != nil {
++		t.Fatal(err)
++	}
++	if trimCalled {
++		t.Error("OnTrim should not be called when no messages are trimmed")
++	}
++}
++
++func TestStreamTrimEvent(t *testing.T) {
++	client := &stubClient{
++		responses: []loop.Response{
++			{Content: "ok", Done: true},
++		},
++	}
++
++	req := &loop.Request{
++		Model: "test",
++		Messages: []loop.Message{
++			{Role: loop.RoleSystem, Content: "system"},
++			{Role: loop.RoleUser, Content: "old"},
++			{Role: loop.RoleAssistant, Content: "old-resp"},
++			{Role: loop.RoleUser, Content: "recent"},
++		},
++		MaxTokens: 25, // tight budget triggers trimming via fallback TokenBudget strategy
++	}
++
++	ch := loop.Stream(context.Background(), client, req, nil, nil)
++
++	var gotTrim *loop.TrimEvent
++	for ev := range ch {
++		if ev.Trim != nil {
++			gotTrim = ev.Trim
++		}
++		if ev.Err != nil {
++			t.Fatalf("unexpected error: %v", ev.Err)
++		}
++	}
++
++	if gotTrim == nil {
++		t.Fatal("expected TrimEvent from Stream, got none")
++	}
++	if len(gotTrim.Dropped) == 0 {
++		t.Error("expected dropped messages in TrimEvent")
++	}
++}
++
+ // alwaysToolCallClient always returns a tool call on every Chat invocation.
+ type alwaysToolCallClient struct{}
+ 
