@@ -5,25 +5,26 @@ set -euo pipefail
 #
 # Usage: bin/refresh-getlamina [--deploy]
 #
-# Updates data-version attributes and dependency graph in getlamina.ai's
-# index.html from the current workspace state. With --deploy, copies to
-# hestia and deploys to Cloudflare Pages.
+# Updates catalog.yaml with current versions and deps from the workspace,
+# then rebuilds index.html via `go run ./cmd/render`. With --deploy,
+# copies to hestia and deploys to Cloudflare Pages.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-SITE_FILE="${GETLAMINA_SITE:-/Users/benaskins/dev/sites/getlamina.ai/index.html}"
+SITE_DIR="${GETLAMINA_DIR:-/Users/benaskins/dev/sites/getlamina.ai}"
+CATALOG="$SITE_DIR/catalog.yaml"
 DEPLOY=false
 
 if [[ "${1:-}" == "--deploy" ]]; then
   DEPLOY=true
 fi
 
-if [[ ! -f "$SITE_FILE" ]]; then
-  echo "ERROR: site file not found: $SITE_FILE" >&2
+if [[ ! -f "$CATALOG" ]]; then
+  echo "ERROR: catalog not found: $CATALOG" >&2
   exit 1
 fi
 
-echo "==> Updating versions"
+echo "==> Updating versions in catalog.yaml"
 
 for dir in "$ROOT"/*/; do
   name="$(basename "$dir")"
@@ -32,66 +33,56 @@ for dir in "$ROOT"/*/; do
   tag=$(cd "$dir" && git describe --tags --abbrev=0 2>/dev/null || echo "")
   [[ -z "$tag" ]] && continue
 
-  if grep -q "data-id=\"$name\"" "$SITE_FILE" 2>/dev/null; then
-    sed -i '' "s|data-id=\"$name\"\(.*\)data-version=\"[^\"]*\"|data-id=\"$name\"\1data-version=\"$tag\"|" "$SITE_FILE"
+  # Update version lines: match "id: <name>" then update the next "version:" line
+  if grep -q "id: $name" "$CATALOG" 2>/dev/null; then
+    # Use awk to find "id: <name>" and update the following "version:" line
+    awk -v id="$name" -v ver="$tag" '
+      /^[[:space:]]*id:/ && $2 == id { found=1 }
+      found && /^[[:space:]]*version:/ { sub(/version:.*/, "version: " ver); found=0 }
+      { print }
+    ' "$CATALOG" > "${CATALOG}.tmp"
+    mv "${CATALOG}.tmp" "$CATALOG"
     echo "  $name → $tag"
   fi
 done
 
-echo "==> Updating dependency graph"
+echo "==> Updating deps in catalog.yaml"
 
-# Build graph JSON from go.mod files
-graph_lines=""
+# Build new deps block from go.mod files
+deps_block="deps:"
 for dir in "$ROOT"/*/; do
   name="$(basename "$dir")"
   modfile="$dir/go.mod"
   [[ -f "$modfile" ]] || continue
 
-  # Extract benaskins deps from go.mod (skip the module line itself)
   deps=$( (grep 'github.com/benaskins/' "$modfile" || true) \
     | (grep -v '^module' || true) \
     | sed 's|.*github.com/benaskins/||; s| .*||' \
     | (grep -v "^${name}$" || true) \
     | sort -u )
 
-  dep_json="[]"
-  if [[ -n "$deps" ]]; then
-    dep_json="[$(echo "$deps" | sed 's|.*|"&"|' | paste -sd, -)]"
-  fi
+  [[ -z "$deps" ]] && continue
 
-  graph_lines+="      \"$name\": { \"deps\": $dep_json },"$'\n'
+  dep_list=$(echo "$deps" | paste -sd, - | sed 's/,/, /g')
+  deps_block+=$'\n'"  $name: [$dep_list]"
 done
 
-# Remove trailing comma from last line
-graph_lines=$(echo "$graph_lines" | sed '$ s/,$//')
-
-# Write new graph block to temp file, then splice it into the HTML
-graph_tmp=$(mktemp)
-cat > "$graph_tmp" <<GRAPH
-    const graph = {
-${graph_lines}    };
-GRAPH
-
-# Find line numbers of the graph block and replace
-graph_start=$(grep -n 'const graph = {' "$SITE_FILE" | head -1 | cut -d: -f1)
-graph_end=$(awk "NR>$graph_start && /^[[:space:]]*\};/ { print NR; exit }" "$SITE_FILE")
-
-if [[ -n "$graph_start" && -n "$graph_end" ]]; then
-  head -n "$((graph_start - 1))" "$SITE_FILE" > "${SITE_FILE}.tmp"
-  cat "$graph_tmp" >> "${SITE_FILE}.tmp"
-  tail -n "+$((graph_end + 1))" "$SITE_FILE" >> "${SITE_FILE}.tmp"
-  mv "${SITE_FILE}.tmp" "$SITE_FILE"
-  echo "  graph updated ($(echo "$graph_lines" | wc -l | tr -d ' ') modules)"
-else
-  echo "  WARNING: could not find graph block in $SITE_FILE"
+# Replace deps block (everything from "deps:" to end of file)
+deps_line=$(grep -n '^deps:' "$CATALOG" | head -1 | cut -d: -f1)
+if [[ -n "$deps_line" ]]; then
+  head -n "$((deps_line - 1))" "$CATALOG" > "${CATALOG}.tmp"
+  echo "$deps_block" >> "${CATALOG}.tmp"
+  mv "${CATALOG}.tmp" "$CATALOG"
+  echo "  deps updated"
 fi
 
-rm -f "$graph_tmp"
+echo "==> Building index.html"
+(cd "$SITE_DIR" && go run ./cmd/render)
 
 echo "==> Done"
 
 if $DEPLOY; then
   echo "==> Deploying to hestia + Cloudflare"
-  scp "$SITE_FILE" hestia:~/dev/sites/getlamina.ai/index.html
+  scp "$SITE_DIR/index.html" "$CATALOG" hestia:~/dev/sites/getlamina.ai/
   ssh hestia 'source ~/.zshrc 2>/dev/null; cd ~/dev/sites && bin/deploy-site getlamina.ai'
 fi
