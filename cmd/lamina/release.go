@@ -5,11 +5,21 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/mod/modfile"
 )
+
+var semverRe = regexp.MustCompile(`^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$`)
+
+func validateVersion(version string) error {
+	if !semverRe.MatchString(version) {
+		return fmt.Errorf("invalid version %q: must be semver like v1.0.0 or v1.2.3-beta.1", version)
+	}
+	return nil
+}
 
 var releaseCmd = &cobra.Command{
 	Use:   "release <module> <version>",
@@ -46,11 +56,17 @@ func runRelease(cmd *cobra.Command, args []string) error {
 		if len(args) != 1 {
 			return fmt.Errorf("--all requires exactly one argument: the version (e.g., lamina release --all v0.1.0)")
 		}
+		if err := validateVersion(args[0]); err != nil {
+			return err
+		}
 		return releaseAll(root, args[0], dryRun)
 	}
 
 	if len(args) != 2 {
 		return fmt.Errorf("requires module name and version (e.g., lamina release axon v0.4.0)")
+	}
+	if err := validateVersion(args[1]); err != nil {
+		return err
 	}
 	return releaseOne(root, args[0], args[1], dryRun)
 }
