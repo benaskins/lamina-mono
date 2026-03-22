@@ -26,6 +26,7 @@ var defaultRepos = []repo{
 	{"aurelia", "https://github.com/benaskins/aurelia.git"},
 	{"axon", "https://github.com/benaskins/axon.git"},
 	{"axon-auth", "https://github.com/benaskins/axon-auth.git"},
+	{"axon-book", "https://github.com/benaskins/axon-book.git"},
 	{"axon-chat", "https://github.com/benaskins/axon-chat.git"},
 	{"axon-eval", "https://github.com/benaskins/axon-eval.git"},
 	{"axon-fact", "https://github.com/benaskins/axon-fact.git"},

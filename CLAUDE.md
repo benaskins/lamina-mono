@@ -19,6 +19,7 @@ The workspace is populated by `lamina init`, which clones all sub-repos into thi
 | **aurelia** | Process supervisor for native processes and Docker containers, with macOS-specific enhancements |
 | **axon** | Shared Go toolkit for AI-powered web services (HTTP lifecycle, auth, SSE, streaming) |
 | **axon-auth** | WebAuthn-based authentication with passkey registration, login, and session management |
+| **axon-book** | Event-sourced double-entry bookkeeping — general ledger, chart of accounts, journal entries via axon-fact |
 | **axon-chat** | Chat service with LLM integration, tool calling, SSE streaming, and agent management |
 | **axon-eval** | Evaluation framework for running scenario plans against a live service cluster |
 | **axon-fact** | Event sourcing primitives — Event type, EventStore/Projector/Publisher interfaces |

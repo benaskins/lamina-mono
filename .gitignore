@@ -3,6 +3,7 @@
 aurelia-core-infrastructure/
 axon/
 axon-*/
+imago/
 
 # Design docs (local working artifacts, not committed)
 docs/plans/
