@@ -99,6 +99,17 @@ func releaseOne(root, name, version string, dryRun bool) error {
 
 	if dryRun {
 		fmt.Printf("[dry-run] would tag %s at %s and push\n", name, version)
+
+		prevTag := gitOutput(dir, "describe", "--tags", "--abbrev=0")
+		var logRange string
+		if prevTag != "" {
+			logRange = prevTag + "..HEAD"
+		} else {
+			logRange = "HEAD"
+		}
+		commitLog := gitOutput(dir, "log", "--oneline", logRange)
+		notes := generateReleaseNotes(version, commitLog)
+		fmt.Printf("[dry-run] release notes:\n%s\n", notes)
 		return nil
 	}
 
@@ -113,6 +124,27 @@ func releaseOne(root, name, version string, dryRun bool) error {
 	}
 
 	fmt.Printf("Released %s %s\n", name, version)
+
+	// Create GitHub release with notes
+	prevTag := gitOutput(dir, "describe", "--tags", "--abbrev=0", version+"^")
+	var logRange string
+	if prevTag != "" {
+		logRange = prevTag + ".." + version
+	} else {
+		logRange = version // first release — all commits
+	}
+	commitLog := gitOutput(dir, "log", "--oneline", logRange)
+	notes := generateReleaseNotes(version, commitLog)
+
+	fmt.Printf("Creating GitHub release %s...\n", version)
+	ghArgs := []string{"release", "create", version, "--title", version, "--notes", notes}
+	ghCmd := exec.Command("gh", ghArgs...)
+	ghCmd.Dir = dir
+	ghCmd.Stdout = os.Stdout
+	ghCmd.Stderr = os.Stderr
+	if err := ghCmd.Run(); err != nil {
+		fmt.Printf("  warning: gh release create failed: %v\n", err)
+	}
 
 	// Refresh getlamina.ai with updated versions and deps
 	refreshScript := filepath.Join(root, "bin", "refresh-getlamina")
@@ -251,6 +283,74 @@ func topoSort(modules []releaseModule) []string {
 type releaseModule struct {
 	name string
 	deps []string
+}
+
+// generateReleaseNotes formats a git log into grouped release notes markdown.
+func generateReleaseNotes(version, commitLog string) string {
+	var features, fixes, other []string
+
+	for _, line := range strings.Split(commitLog, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+
+		// Split "hash message" — take everything after the first space
+		parts := strings.SplitN(line, " ", 2)
+		if len(parts) < 2 {
+			continue
+		}
+		msg := parts[1]
+
+		switch {
+		case strings.HasPrefix(msg, "feat:") || strings.HasPrefix(msg, "feat("):
+			msg = strings.TrimPrefix(msg, "feat: ")
+			msg = strings.TrimPrefix(msg, "feat(")
+			if i := strings.Index(msg, "):"); i >= 0 {
+				msg = strings.TrimSpace(msg[i+2:])
+			}
+			features = append(features, msg)
+		case strings.HasPrefix(msg, "fix:") || strings.HasPrefix(msg, "fix("):
+			msg = strings.TrimPrefix(msg, "fix: ")
+			msg = strings.TrimPrefix(msg, "fix(")
+			if i := strings.Index(msg, "):"); i >= 0 {
+				msg = strings.TrimSpace(msg[i+2:])
+			}
+			fixes = append(fixes, msg)
+		default:
+			// Strip prefix for display: "docs: foo" → "foo"
+			if i := strings.Index(msg, ": "); i >= 0 {
+				msg = msg[i+2:]
+			}
+			other = append(other, msg)
+		}
+	}
+
+	var b strings.Builder
+	fmt.Fprintf(&b, "## What's new in %s\n", version)
+
+	if len(features) > 0 {
+		b.WriteString("\n### Features\n")
+		for _, f := range features {
+			fmt.Fprintf(&b, "- %s\n", f)
+		}
+	}
+
+	if len(fixes) > 0 {
+		b.WriteString("\n### Fixes\n")
+		for _, f := range fixes {
+			fmt.Fprintf(&b, "- %s\n", f)
+		}
+	}
+
+	if len(other) > 0 {
+		b.WriteString("\n### Other\n")
+		for _, o := range other {
+			fmt.Fprintf(&b, "- %s\n", o)
+		}
+	}
+
+	return b.String()
 }
 
 func runGit(dir string, args ...string) error {
