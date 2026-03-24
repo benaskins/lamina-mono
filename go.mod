@@ -3,7 +3,7 @@ module github.com/benaskins/lamina
 go 1.26.1
 
 require (
-	github.com/benaskins/axon-eval v0.0.0-00010101000000-000000000000
+	github.com/benaskins/axon-eval v0.2.4
 	github.com/benaskins/axon-loop v0.7.1
 	github.com/benaskins/axon-talk v0.6.0
 	github.com/benaskins/axon-tool v0.1.6
@@ -11,8 +11,6 @@ require (
 	golang.org/x/mod v0.33.0
 	gopkg.in/yaml.v3 v3.0.1
 )
-
-replace github.com/benaskins/axon-eval => ./axon-eval
 
 require (
 	github.com/andybalholm/cascadia v1.3.3 // indirect
