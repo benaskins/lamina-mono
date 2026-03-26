@@ -39,7 +39,7 @@ Player types "I try to pick the lock on the chest"
                    │ tool calls
         ┌──────────┼──────────┐
         ▼          ▼          ▼
-   axon-mind   axon-fact   axon-memo
+   Go funcs    axon-fact   axon-memo
    (rules)     (state)     (NPC memory)
 ```
 
@@ -56,43 +56,91 @@ The LLM is the dungeon master. `loop.Run()` orchestrates each turn:
 
 The DM prompt instructs the LLM to always use tools for mechanical resolution (dice rolls, skill checks, inventory changes) rather than making things up. This keeps the game fair while the narrative stays creative.
 
-### axon-mind — The Rulebook
+### Go Functions — The Rules Engine
 
-Prolog rules define game mechanics declaratively. The LLM queries them via a `query_rules` tool rather than reasoning about rules from memory.
+Game rules are plain Go functions behind tool definitions. Each tool IS a rule — no
+separate rules language, no state synchronization problem. The axon-fact projectors
+provide the read model that tools query.
 
-```prolog
-%% combat.pl
-hits(Roll, TargetAC) :- Roll >= TargetAC.
-critical(Roll) :- Roll >= 20.
-fumble(Roll) :- Roll =< 1.
-
-%% ability_check.pl
-check_succeeds(Roll, Modifier, DC) :- Total is Roll + Modifier, Total >= DC.
-
-%% prerequisites.pl
-can_learn(Char, Spell) :-
-    spell_requires_level(Spell, Lvl),
-    char_level(Char, CharLvl),
-    CharLvl >= Lvl.
-
-can_equip(Char, Item) :-
-    item_requires(Item, Attr, Min),
-    char_attr(Char, Attr, Val),
-    Val >= Min.
-
-%% quest logic
-quest_available(Q) :- \+ quest_completed(Q), forall(prerequisite(Q, P), quest_completed(P)).
-```
-
-Dynamic facts get asserted as game state changes:
+This follows how game engines typically encode rules: **procedural code operating on
+data-driven definitions**. Rules live in Go, content lives in data (JSON/YAML loaded
+at startup or from the event store).
 
 ```go
-engine.Assert("char_level", "aldric", "5")
-engine.Assert("char_attr", "aldric", "dex", "16")
-engine.Assert("quest_completed", "find_amulet")
+// The rule IS the tool. Projector is the source of truth.
+func checkSkill(sheets *CharacterSheetProjector) tool.ToolDef {
+    return tool.ToolDef{
+        Name:        "check_skill",
+        Description: "Roll an ability/skill check against a difficulty class",
+        Parameters:  skillCheckParams,
+        Execute: func(ctx *tool.ToolContext, args map[string]any) tool.ToolResult {
+            charID, _ := args["character"].(string)
+            skill, _ := args["skill"].(string)
+            dc := int(args["dc"].(float64))
+
+            sheet := sheets.Get(charID)
+            modifier := sheet.SkillModifier(skill)
+            roll := rand.Intn(20) + 1
+            total := roll + modifier
+            passed := total >= dc
+
+            return tool.ToolResult{
+                Content: fmt.Sprintf("Roll: %d (d20: %d + %s: %+d) vs DC %d — %s",
+                    total, roll, skill, modifier, dc, passFail(passed)),
+            }
+        },
+    }
+}
 ```
 
-The LLM calls `query_rules("can_equip(aldric, dragon_slayer_sword).")` and gets a definitive answer. No hallucinated rules.
+Content definitions (items, creatures, spells) are data-driven — loaded from YAML or
+stored as events — so game designers can add content without changing code:
+
+```yaml
+# data/items.yaml
+longsword:
+  type: weapon
+  damage: 1d8
+  properties: [versatile]
+  requirements:
+    strength: 10
+
+plate_armor:
+  type: armor
+  ac: 18
+  requirements:
+    strength: 15
+```
+
+```go
+// Equipment rules reference the data
+func canEquip(sheet *CharacterSheet, item ItemDef) bool {
+    for attr, min := range item.Requirements {
+        if sheet.Attribute(attr) < min {
+            return false
+        }
+    }
+    return true
+}
+```
+
+**Why Go functions over a rules engine:**
+- One source of truth (axon-fact projectors), no sync problem
+- Debuggable with standard Go tooling
+- The LLM doesn't need to formulate queries in a specialized syntax
+- Type-safe, testable, no runtime parsing errors
+
+### axon-mind — Future Enhancement (Phase 4+)
+
+axon-mind (embedded Prolog) is deferred to later phases where declarative logic
+genuinely outperforms procedural code:
+
+- **Quest dependency graphs** with 10+ interrelated prerequisites and conditional branches
+- **Faction reputation cascades** — transitive alliance/enemy inference
+- **NPC dialogue preconditions** — complex world-state-dependent conversation trees
+
+When introduced, Prolog facts would be loaded FROM axon-fact projections (not
+maintained separately), keeping the event store as the single source of truth.
 
 ### axon-fact — The Save File
 
@@ -184,7 +232,7 @@ The DM's toolbox — these are the `tool.ToolDef` instances wired into `loop.Run
 | `check_skill` | Ability/skill check against DC | Pass/fail, roll detail, margin |
 | `attack_roll` | Attack with weapon against target AC | Hit/miss/crit, damage if hit |
 | `saving_throw` | Save against effect | Pass/fail, roll detail |
-| `query_rules` | Query Prolog rulebook | True/false + variable bindings |
+| `check_can_equip` | Check equipment requirements | Pass/fail, which requirement unmet |
 
 ### State Management
 
@@ -248,31 +296,36 @@ func rollDiceTool() tool.ToolDef {
     }
 }
 
-func queryRulesTool(engine *mind.Engine) tool.ToolDef {
+func canEquipTool(sheets *CharacterSheetProjector, items *ItemCatalog) tool.ToolDef {
     return tool.ToolDef{
-        Name:        "query_rules",
-        Description: "Query the game rulebook (Prolog). Use to check prerequisites, validate actions, resolve ambiguous rules.",
+        Name:        "check_can_equip",
+        Description: "Check if a character meets the requirements to equip an item.",
         Parameters: tool.ParameterSchema{
             Type:     "object",
-            Required: []string{"goal"},
+            Required: []string{"character", "item"},
             Properties: map[string]tool.PropertySchema{
-                "goal": {
-                    Type:        "string",
-                    Description: "Prolog goal to query, e.g. can_equip(aldric, longsword).",
-                },
+                "character": {Type: "string", Description: "Character ID"},
+                "item":      {Type: "string", Description: "Item ID"},
             },
         },
         Execute: func(ctx *tool.ToolContext, args map[string]any) tool.ToolResult {
-            goal, _ := args["goal"].(string)
-            solutions, err := engine.Query(goal)
-            if err != nil {
-                return tool.ToolResult{Content: fmt.Sprintf("Rule query error: %v", err)}
+            charID, _ := args["character"].(string)
+            itemID, _ := args["item"].(string)
+
+            sheet := sheets.Get(charID)
+            item, ok := items.Get(itemID)
+            if !ok {
+                return tool.ToolResult{Content: fmt.Sprintf("Unknown item: %s", itemID)}
             }
-            if len(solutions) == 0 {
-                return tool.ToolResult{Content: "No. (query has no solutions)"}
+            for attr, min := range item.Requirements {
+                if sheet.Attribute(attr) < min {
+                    return tool.ToolResult{
+                        Content: fmt.Sprintf("No. %s requires %s %d, %s has %d.",
+                            item.Name, attr, min, sheet.Name, sheet.Attribute(attr)),
+                    }
+                }
             }
-            data, _ := mind.SolutionsJSON(solutions)
-            return tool.ToolResult{Content: string(data)}
+            return tool.ToolResult{Content: fmt.Sprintf("Yes. %s can equip %s.", sheet.Name, item.Name)}
         },
     }
 }
@@ -312,7 +365,7 @@ The DM's system prompt is assembled from layers:
    "- roll_dice: any random outcome
     - check_skill: ability checks, skill checks
     - attack_roll: combat attacks
-    - query_rules: rule lookups, prerequisite checks
+    - check_can_equip: equipment prerequisite checks
     - get_character: before describing character state
     - apply_damage/heal: HP changes
     - recall_npc_memory: before voicing any recurring NPC"
@@ -326,21 +379,21 @@ Each step is one commit-sized change.
 
 1. **New module `axon-rpg`** — `go mod init`, basic types (Character, Creature, Item, Location)
 2. **Dice engine** — `roll_dice` tool + dice notation parser + tests
-3. **Character model** — event-sourced character sheet with projector (axon-fact)
-4. **Prolog rulebook** — base rules (ability checks, combat, prerequisites) + `query_rules` tool
+3. **Data definitions** — YAML-driven item/creature/spell catalogs loaded at startup
+4. **Character model** — event-sourced character sheet with projector (axon-fact)
 
 ### Phase 2: Game Loop
 
 5. **DM agent** — system prompt builder, tool wiring, `loop.Run` integration
-6. **Skill check tool** — `check_skill` using dice engine + Prolog rules
+6. **Skill check tool** — `check_skill` using dice engine + character projector
 7. **Combat tools** — `attack_roll`, `apply_damage`, `heal`, initiative tracking
-8. **Inventory tools** — `add_to_inventory`, `remove_from_inventory`, encumbrance rules
+8. **Inventory tools** — `add_to_inventory`, `remove_from_inventory`, equipment checks
 
 ### Phase 3: World
 
 9. **Location model** — event-sourced locations, `get_location`, `move_to`
 10. **Encounter model** — event-sourced encounters, turn tracking
-11. **Quest system** — Prolog-driven prerequisites, `update_quest`, completion checks
+11. **Quest system** — Go-based prerequisite checks, `update_quest`, completion tracking
 12. **NPC memory integration** — `recall_npc_memory` tool wired to axon-memo
 
 ### Phase 4: Service
@@ -349,6 +402,12 @@ Each step is one commit-sized change.
 14. **Campaign persistence** — session start/end, campaign-level events
 15. **Multiplayer** — axon-nats for shared world events
 16. **Eval plans** — axon-eval scenarios for testing DM behavior
+
+### Phase 5: Advanced (Optional)
+
+17. **axon-mind for quest graphs** — Prolog for complex prerequisite chains, loaded from projections
+18. **axon-mind for faction logic** — transitive alliance/enemy inference
+19. **axon-mind for NPC dialogue trees** — conditional preconditions on conversation branches
 
 ## What Doesn't Need Building
 
@@ -359,12 +418,12 @@ The axon ecosystem already provides:
 - Conversation loop with tool dispatch and streaming → **axon-loop**
 - Tool definition framework → **axon-tool**
 - Event store with projectors (memory + postgres) → **axon-fact**
-- Prolog inference engine → **axon-mind**
 - NPC memory with vector search and relationship tracking → **axon-memo**
+- Prolog inference engine (phase 5, quest/faction graphs) → **axon-mind**
 - Cross-instance event distribution → **axon-nats**
 - Background task queue → **axon-task**
 - LLM provider adapters (Ollama, Claude, GPT) → **axon-talk**
 - Evaluation framework → **axon-eval**
 - Auth middleware → **axon**
 
-The RPG-specific code is: game types, dice parser, Prolog rule files, tool implementations, system prompt builder, and HTTP handlers. Everything else is composition.
+The RPG-specific code is: game types, dice parser, data catalogs (YAML), tool implementations, projectors, system prompt builder, and HTTP handlers. Everything else is composition.
