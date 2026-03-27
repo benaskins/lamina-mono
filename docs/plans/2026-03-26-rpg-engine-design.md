@@ -1,4 +1,4 @@
-# RPG Engine — Text-Based Dungeon Master via Axon
+# RPG Engine: Text-Based Dungeon Master via Axon
 
 **Date**: 2026-03-26
 **Status**: Draft
@@ -6,7 +6,7 @@
 
 ## Premise
 
-A text-based RPG where an LLM acts as dungeon master (Warden in Cairn terms). The player's interface is a conversation. The Warden narrates, adjudicates rules, voices NPCs, and drives the world forward — all constrained by game mechanics executed through tool calls.
+A text-based RPG where an LLM acts as dungeon master (Warden in Cairn terms). The player's interface is a conversation. The Warden narrates, adjudicates rules, voices NPCs, and drives the world forward: all constrained by game mechanics executed through tool calls.
 
 This is **axon-chat with a game layer**. The conversation loop IS the game loop.
 
@@ -14,7 +14,7 @@ This is **axon-chat with a game layer**. The conversation loop IS the game loop.
 Player types "I try to pick the lock on the chest"
   → axon-loop sends to LLM (with Warden system prompt + tools)
   → LLM calls save(character="Aldric", ability="dex")
-  → Tool rolls d20 vs DEX 14, returns "Roll: 11 vs DEX 14 — Success."
+  → Tool rolls d20 vs DEX 14, returns "Roll: 11 vs DEX 14: Success."
   → LLM narrates: "The tumblers click into place. Inside, you find..."
   → LLM calls add_to_inventory(character="Aldric", item="Ruby Amulet")
   → Streamed token-by-token via SSE to the player
@@ -26,20 +26,20 @@ Cairn's rules fit on a page. The entire mechanical layer is ~5 Go functions. Thi
 - The LLM spends context on narrative, not bookkeeping
 - Combat resolves in 1-3 rounds (deadly), not 10 (grindy)
 - The full rules can be embedded in the system prompt
-- Tool surface is minimal — fewer chances for the LLM to misuse mechanics
+- Tool surface is minimal: fewer chances for the LLM to misuse mechanics
 
 ## Architecture
 
 ```
 ┌──────────────────────────────────────────────┐
-│  axon — HTTP server, SSE streaming, auth     │
+│  axon: HTTP server, SSE streaming, auth     │
 │  POST /api/chat          (game turn)         │
 │  GET  /api/game/state    (current state)     │
 │  GET  /api/game/character (character sheet)   │
 └──────────────────┬───────────────────────────┘
                    │
 ┌──────────────────▼───────────────────────────┐
-│  axon-loop — Conversation loop               │
+│  axon-loop: Conversation loop               │
 │  System prompt: Cairn rules + world lore     │
 │  Tools: game mechanic functions              │
 │  Context: SlidingWindow or TokenBudget       │
@@ -241,37 +241,37 @@ func attackTool(chars *CharacterProjector) tool.ToolDef {
 Every game action is an immutable event:
 
 ```
-character:{id}   — CharacterCreated, DamageTaken, Healed, ItemAdded,
+character:{id}  : CharacterCreated, DamageTaken, Healed, ItemAdded,
                    ItemDropped, FatigueAdded, FatigueCleared,
                    ScarReceived, AbilityChanged, Deprived, Died
 
-encounter:{id}   — EncounterStarted, InitiativeRolled, AttackResolved,
+encounter:{id}  : EncounterStarted, InitiativeRolled, AttackResolved,
                    SpellCast, MoraleChecked, CreatureDefeated,
                    EncounterEnded
 
-world:{region}   — RegionEntered, EventTriggered, NPCSpawned
+world:{region}  : RegionEntered, EventTriggered, NPCSpawned
 
-campaign:{id}    — CampaignCreated, SessionStarted, SessionEnded
+campaign:{id}   : CampaignCreated, SessionStarted, SessionEnded
 ```
 
 **Projectors** build read models:
-- **CharacterSheet** — current HP, STR/DEX/WIL, inventory slots, conditions
-- **EncounterState** — who's in the fight, creature HP, initiative
-- **WorldState** — current region, known locations, world flags
+- **CharacterSheet**: current HP, STR/DEX/WIL, inventory slots, conditions
+- **EncounterState**: who's in the fight, creature HP, initiative
+- **WorldState**: current region, known locations, world flags
 
-## axon-memo — NPC Memory
+## axon-memo: NPC Memory
 
-NPCs remember the player across sessions. The `recall_npc_memory` tool does vector search when the player talks to an NPC. Relationship metrics (ABI trust model) drive NPC disposition — stacks with Cairn's 2d6 reaction roll.
+NPCs remember the player across sessions. The `recall_npc_memory` tool does vector search when the player talks to an NPC. Relationship metrics (ABI trust model) drive NPC disposition: stacks with Cairn's 2d6 reaction roll.
 
-## axon-nats — Shared World (Multiplayer)
+## axon-nats: Shared World (Multiplayer)
 
 `EventBus[WorldEvent]` fans out world events across server instances. Player A slays a creature, Player B hears about it from an NPC.
 
-## axon-task — Background Processing
+## axon-task: Background Processing
 
-- **NarrativeWorker** — session summaries
-- **ConsolidationWorker** — nightly NPC memory consolidation
-- **WorldTickWorker** — time-based world events
+- **NarrativeWorker**: session summaries
+- **ConsolidationWorker**: nightly NPC memory consolidation
+- **WorldTickWorker**: time-based world events
 
 ## System Prompt Structure
 
@@ -311,41 +311,41 @@ Each step is one commit-sized change.
 
 ### Phase 1: Foundation
 
-1. **New module `axon-rpg`** — `go mod init`, Cairn types (Character, Creature, Item, Spell)
-2. **Dice engine** — `roll_dice` tool + NdS+M parser + tests
-3. **Save mechanic** — `save` tool (d20-under) + tests
-4. **Character creation** — random generation from Cairn tables + `create_character` tool
+1. **New module `axon-rpg`**: `go mod init`, Cairn types (Character, Creature, Item, Spell)
+2. **Dice engine**: `roll_dice` tool + NdS+M parser + tests
+3. **Save mechanic**: `save` tool (d20-under) + tests
+4. **Character creation**: random generation from Cairn tables + `create_character` tool
 
 ### Phase 2: Game Loop
 
-5. **Warden agent** — system prompt builder with embedded Cairn rules, tool wiring, `loop.Run`
-6. **Combat tools** — `attack` (with impaired/enhanced/blast), `apply_damage` (HP→STR overflow, scars, crit)
-7. **Inventory tools** — `add_to_inventory`, `drop_item`, slot tracking, bulky items, full=0HP
-8. **Magic tools** — `cast_spell` (fatigue), spellbook inventory management
+5. **Warden agent**: system prompt builder with embedded Cairn rules, tool wiring, `loop.Run`
+6. **Combat tools**: `attack` (with impaired/enhanced/blast), `apply_damage` (HP→STR overflow, scars, crit)
+7. **Inventory tools**: `add_to_inventory`, `drop_item`, slot tracking, bulky items, full=0HP
+8. **Magic tools**: `cast_spell` (fatigue), spellbook inventory management
 
 ### Phase 3: World
 
-9. **Character model** — event-sourced with projector (axon-fact)
-10. **Location model** — event-sourced locations, `get_location`, `move_to`
-11. **Encounter model** — initiative, morale checks, creature tracking
-12. **NPC memory** — `recall_npc_memory` wired to axon-memo
+9. **Character model**: event-sourced with projector (axon-fact)
+10. **Location model**: event-sourced locations, `get_location`, `move_to`
+11. **Encounter model**: initiative, morale checks, creature tracking
+12. **NPC memory**: `recall_npc_memory` wired to axon-memo
 
 ### Phase 4: Service
 
-13. **HTTP handlers** — game session endpoints, SSE streaming (reuse axon-chat patterns)
-14. **Campaign persistence** — session start/end, campaign-level events
-15. **Multiplayer** — axon-nats for shared world events
-16. **Eval plans** — axon-eval scenarios for testing Warden behavior
+13. **HTTP handlers**: game session endpoints, SSE streaming (reuse axon-chat patterns)
+14. **Campaign persistence**: session start/end, campaign-level events
+15. **Multiplayer**: axon-nats for shared world events
+16. **Eval plans**: axon-eval scenarios for testing Warden behavior
 
 ### Phase 5: Advanced (Optional)
 
-17. **axon-mind for quest graphs** — Prolog for complex prerequisite chains
-18. **axon-mind for faction logic** — transitive alliance/enemy inference
-19. **Cairn 2e enhancements** — modular rules, advanced scar mechanics
+17. **axon-mind for quest graphs**: Prolog for complex prerequisite chains
+18. **axon-mind for faction logic**: transitive alliance/enemy inference
+19. **Cairn 2e enhancements**: modular rules, advanced scar mechanics
 
 ## What Doesn't Need Building
 
-The axon ecosystem already provides:
+The axon stack already provides:
 
 - HTTP server with graceful shutdown, health checks, metrics → **axon**
 - SSE streaming with fan-out → **axon/sse**
@@ -364,6 +364,6 @@ The RPG-specific code is: Cairn types, dice parser, save/damage/combat functions
 
 ## References
 
-- [Cairn SRD (1st Edition)](https://cairnrpg.com/first-edition/cairn-srd/) — CC-BY-SA 4.0
-- [Cairn 2e](https://cairnrpg.com/second-edition/) — CC-BY-SA 4.0
+- [Cairn SRD (1st Edition)](https://cairnrpg.com/first-edition/cairn-srd/): CC-BY-SA 4.0
+- [Cairn 2e](https://cairnrpg.com/second-edition/): CC-BY-SA 4.0
 - [Cairn GitHub](https://github.com/yochaigal/cairn)
