@@ -11,7 +11,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-SITE_DIR="${GETLAMINA_DIR:-/Users/benaskins/dev/sites/getlamina.ai}"
+SITE_DIR="${GETLAMINA_DIR:-/Users/benaskins/dev/tegmen/getlamina.ai}"
 CATALOG="$SITE_DIR/catalog.yaml"
 DEPLOY=false
 
@@ -26,7 +26,8 @@ fi
 
 echo "==> Updating versions in catalog.yaml"
 
-for dir in "$ROOT"/*/; do
+for dir in "$ROOT"/*/ "$ROOT"/apps/*/; do
+  [[ -d "$dir" ]] || continue
   name="$(basename "$dir")"
   [[ -d "$dir/.git" ]] || continue
 
@@ -50,7 +51,8 @@ echo "==> Updating deps in catalog.yaml"
 
 # Build new deps block from go.mod files
 deps_block="deps:"
-for dir in "$ROOT"/*/; do
+for dir in "$ROOT"/*/ "$ROOT"/apps/*/; do
+  [[ -d "$dir" ]] || continue
   name="$(basename "$dir")"
   modfile="$dir/go.mod"
   [[ -f "$modfile" ]] || continue
