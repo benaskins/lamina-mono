@@ -135,7 +135,7 @@ func releaseOne(ctx context.Context, root, name, version string, dryRun bool) er
 
 	// For apps: strip replace directives, tidy, commit, tag, then restore
 	if isApp {
-		if err := stripAppReplaces(dir); err != nil {
+		if err := stripAppReplaces(root, dir); err != nil {
 			return fmt.Errorf("stripping replace directives: %w", err)
 		}
 		tidyCmd := exec.Command("go", "mod", "tidy")
@@ -689,8 +689,9 @@ func runGit(dir string, args ...string) error {
 	return cmd.Run()
 }
 
-// stripAppReplaces removes all workspace replace directives from an app's go.mod.
-func stripAppReplaces(appDir string) error {
+// stripAppReplaces removes all workspace replace directives from an app's go.mod
+// and pins require versions to the latest published tag for each dependency.
+func stripAppReplaces(root, appDir string) error {
 	modPath := filepath.Join(appDir, "go.mod")
 	data, err := os.ReadFile(modPath)
 	if err != nil {
@@ -703,10 +704,26 @@ func stripAppReplaces(appDir string) error {
 
 	for _, rep := range f.Replace {
 		// Only strip local (relative path) replaces for workspace modules
-		if strings.HasPrefix(rep.New.Path, ".") || strings.HasPrefix(rep.New.Path, "/") {
-			if err := f.DropReplace(rep.Old.Path, rep.Old.Version); err != nil {
-				return fmt.Errorf("dropping replace for %s: %w", rep.Old.Path, err)
+		if !strings.HasPrefix(rep.New.Path, ".") && !strings.HasPrefix(rep.New.Path, "/") {
+			continue
+		}
+
+		// Before dropping the replace, pin the require to the latest published tag
+		if strings.HasPrefix(rep.Old.Path, modulePrefix) {
+			depName := strings.TrimPrefix(rep.Old.Path, modulePrefix)
+			depDir, err := resolveRepoDir(root, depName)
+			if err == nil {
+				latestTag := gitOutput(depDir, "describe", "--tags", "--abbrev=0")
+				if latestTag != "" {
+					if err := f.AddRequire(rep.Old.Path, latestTag); err != nil {
+						fmt.Fprintf(os.Stderr, "    warning: could not pin %s to %s: %v\n", depName, latestTag, err)
+					}
+				}
 			}
+		}
+
+		if err := f.DropReplace(rep.Old.Path, rep.Old.Version); err != nil {
+			return fmt.Errorf("dropping replace for %s: %w", rep.Old.Path, err)
 		}
 	}
 
