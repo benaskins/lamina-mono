@@ -9,6 +9,8 @@ repos:
     url: https://github.com/benaskins/axon-chat.git
   - name: axon-eval
     url: https://github.com/benaskins/axon-eval.git
+  - name: axon-face
+    url: https://github.com/benaskins/axon-face.git
   - name: axon-fact
     url: https://github.com/benaskins/axon-fact.git
   - name: axon-gate
@@ -25,10 +27,10 @@ repos:
     url: https://github.com/benaskins/axon-mind.git
   - name: axon-nats
     url: https://github.com/benaskins/axon-nats.git
-  - name: axon-talk
-    url: https://github.com/benaskins/axon-talk.git
   - name: axon-synd
     url: https://github.com/benaskins/axon-synd.git
+  - name: axon-talk
+    url: https://github.com/benaskins/axon-talk.git
   - name: axon-task
     url: https://github.com/benaskins/axon-task.git
   - name: axon-tool
