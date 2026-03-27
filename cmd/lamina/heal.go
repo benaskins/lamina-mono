@@ -124,12 +124,24 @@ func healAheadOfTag(ctx context.Context, root string, d Diagnostic, dryRun bool)
 		return fmt.Errorf("no latest tag in diagnostic")
 	}
 
+	name := repoNameFromDiagnostic(d)
 	nextTag, err := bumpPatch(d.LatestTag)
 	if err != nil {
 		return fmt.Errorf("computing next version: %w", err)
 	}
 
-	name := repoNameFromDiagnostic(d)
+	// Keep bumping if the computed tag already exists
+	for {
+		existing := gitOutput(d.Dir, "tag", "-l", nextTag)
+		if existing == "" {
+			break
+		}
+		nextTag, err = bumpPatch(nextTag)
+		if err != nil {
+			return fmt.Errorf("computing next version: %w", err)
+		}
+	}
+
 	return releaseOne(ctx, root, name, nextTag, dryRun)
 }
 
