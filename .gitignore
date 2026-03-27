@@ -8,6 +8,9 @@ imago/
 # Design docs (local working artifacts, not committed)
 docs/plans/
 
+# PIR (local research, not committed)
+docs/pir/
+
 # Private facts (Prolog knowledge bases, not published)
 facts/
 
