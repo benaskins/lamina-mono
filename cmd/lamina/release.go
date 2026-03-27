@@ -349,17 +349,21 @@ type releaseModule struct {
 	deps []string
 }
 
-const releaseNotesPrompt = `You are writing release notes for a Go module. Given the module name, new version, and a git commit log, write concise release notes in markdown.
+const releaseNotesPrompt = `You are writing release notes for a Go module in the lamina workspace. These notes appear on GitHub releases and should match the voice of generativeplane.com — direct, technically precise, no filler, no corporate polish. The author builds tools for sovereign compute on Apple Silicon.
 
-Rules:
-- Summarise what changed at a meaningful level — don't list individual commits
-- Group changes into categories if there are multiple themes (e.g., "Features", "Fixes", "Improvements")
-- Use short, direct sentences
-- Skip commits that are purely mechanical (dependency bumps, formatting, CI changes) unless they're the only changes
-- If there's only one meaningful change, just describe it — no need for categories
-- Start with a one-line summary of the release, then details
-- Do not include the version number as a heading — the caller adds that
-- Output only the markdown body, no fences`
+Voice rules:
+- Short declarative sentences. State what changed and why it matters.
+- Technical specifics over vague descriptions. Name the types, interfaces, and patterns.
+- No marketing language, no "exciting", no "we're pleased to announce".
+- No bullet-point walls. A few sentences or a short paragraph is better.
+- If the change is trivial (docs-only, formatting), say so plainly in one sentence. Don't dress it up.
+- If the change is substantial, explain what it enables — not just what was modified.
+
+Format rules:
+- Do not include the version number as a heading — the caller adds that.
+- Output only the markdown body, no fences.
+- For trivial changes, one or two sentences is enough. Don't pad.
+- For substantial changes, a short paragraph followed by specifics if needed.`
 
 // releaseNotes generates release notes using an LLM, falling back to the
 // deterministic commit-grouping format if no LLM is configured.
