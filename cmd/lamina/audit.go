@@ -57,7 +57,10 @@ func runAudit(cmd *cobra.Command, args []string) error {
 func runSecurityAudit(dir string) auditResult {
 	var result auditResult
 
-	// govulncheck
+	// Get the module's own packages (respects go.mod boundaries, unlike ./... for gosec).
+	pkgs := modulePackages(dir)
+
+	// govulncheck — already respects go.mod boundaries with ./...
 	out, err := runTool(dir, "govulncheck", "-json", "./...")
 	if err != nil && len(out) == 0 {
 		fmt.Fprintf(os.Stderr, "  warning: govulncheck failed to run: %v\n", err)
@@ -66,23 +69,49 @@ func runSecurityAudit(dir string) auditResult {
 		result.fixableVulns, result.unfixableVulns = classifyVulns(findings)
 	}
 
-	// gosec
-	out, err = runTool(dir, "gosec", "-exclude=G104,G706", "-fmt", "json", "-quiet", "./...")
-	if err != nil && len(out) == 0 {
-		fmt.Fprintf(os.Stderr, "  warning: gosec failed to run: %v\n", err)
-	} else {
-		result.gosecFindings = parseGosecJSON(out)
+	// gosec — pass explicit package list to avoid scanning sub-repos
+	if len(pkgs) > 0 {
+		gosecArgs := append([]string{"-exclude=G104,G704,G706", "-fmt", "json", "-quiet"}, pkgs...)
+		out, err = runTool(dir, "gosec", gosecArgs...)
+		if err != nil && len(out) == 0 {
+			fmt.Fprintf(os.Stderr, "  warning: gosec failed to run: %v\n", err)
+		} else {
+			result.gosecFindings = parseGosecJSON(out)
+		}
 	}
 
-	// staticcheck
-	out, err = runTool(dir, "staticcheck", "-f", "json", "./...")
-	if err != nil && len(out) == 0 {
-		fmt.Fprintf(os.Stderr, "  warning: staticcheck failed to run: %v\n", err)
-	} else {
-		result.staticcheckFindings = parseStaticcheckJSON(out)
+	// staticcheck — pass explicit package list to avoid scanning sub-repos
+	if len(pkgs) > 0 {
+		scArgs := append([]string{"-f", "json"}, pkgs...)
+		out, err = runTool(dir, "staticcheck", scArgs...)
+		if err != nil && len(out) == 0 {
+			fmt.Fprintf(os.Stderr, "  warning: staticcheck failed to run: %v\n", err)
+		} else {
+			result.staticcheckFindings = parseStaticcheckJSON(out)
+		}
 	}
 
 	return result
+}
+
+// modulePackages returns the Go package import paths belonging to this module.
+func modulePackages(dir string) []string {
+	cmd := exec.Command("go", "list", "./...")
+	cmd.Dir = dir
+	out, err := cmd.Output()
+	if err != nil {
+		return []string{"./..."}
+	}
+	var pkgs []string
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		if line != "" {
+			pkgs = append(pkgs, line)
+		}
+	}
+	if len(pkgs) == 0 {
+		return []string{"./..."}
+	}
+	return pkgs
 }
 
 func runTool(dir, name string, args ...string) ([]byte, error) {
