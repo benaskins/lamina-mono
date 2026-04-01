@@ -21,6 +21,9 @@ import (
 
 var semverRe = regexp.MustCompile(`^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$`)
 
+// refreshSite controls whether to refresh getlamina.ai after release.
+var refreshSite bool
+
 func validateVersion(version string) error {
 	if !semverRe.MatchString(version) {
 		return fmt.Errorf("invalid version %q: must be semver like v1.0.0 or v1.2.3-beta.1", version)
@@ -48,6 +51,7 @@ func init() {
 	releaseCmd.Flags().Bool("all", false, "Release all modules that lack the specified version tag")
 	releaseCmd.Flags().Bool("dry-run", false, "Show what would be done without doing it")
 	releaseCmd.Flags().Bool("backfill-notes", false, "Create GitHub releases for existing tags that lack them")
+	releaseCmd.Flags().Bool("refresh-site", false, "Refresh getlamina.ai after release")
 	rootCmd.AddCommand(releaseCmd)
 }
 
@@ -60,6 +64,7 @@ func runRelease(cmd *cobra.Command, args []string) error {
 	allFlag, _ := cmd.Flags().GetBool("all")
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 	backfill, _ := cmd.Flags().GetBool("backfill-notes")
+	refreshSite, _ = cmd.Flags().GetBool("refresh-site")
 
 	if backfill {
 		if len(args) > 0 {
@@ -208,16 +213,18 @@ func releaseOne(ctx context.Context, root, name, version string, dryRun bool) er
 	// Run LLM doc review if configured
 	runDocReview(ctx, dir, name, prevTag, version, false)
 
-	// Refresh getlamina.ai with updated versions and deps
-	refreshScript := filepath.Join(root, "scripts", "refresh-getlamina")
-	if _, err := os.Stat(refreshScript); err == nil {
-		fmt.Println("Refreshing getlamina.ai...")
-		refresh := exec.Command(refreshScript, "--deploy")
-		refresh.Dir = root
-		refresh.Stdout = os.Stdout
-		refresh.Stderr = os.Stderr
-		if err := refresh.Run(); err != nil {
-			fmt.Printf("  warning: refresh-getlamina failed: %v\n", err)
+	// Refresh getlamina.ai with updated versions and deps (opt-in)
+	if refreshSite {
+		refreshScript := filepath.Join(root, "scripts", "refresh-getlamina")
+		if _, err := os.Stat(refreshScript); err == nil {
+			fmt.Println("Refreshing getlamina.ai...")
+			refresh := exec.Command(refreshScript, "--deploy")
+			refresh.Dir = root
+			refresh.Stdout = os.Stdout
+			refresh.Stderr = os.Stderr
+			if err := refresh.Run(); err != nil {
+				fmt.Printf("  warning: refresh-getlamina failed: %v\n", err)
+			}
 		}
 	}
 
