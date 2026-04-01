@@ -33,6 +33,8 @@ repos:
     url: https://github.com/benaskins/axon-synd.git
   - name: axon-talk
     url: https://github.com/benaskins/axon-talk.git
+  - name: axon-tape
+    url: https://github.com/benaskins/axon-tape.git
   - name: axon-task
     url: https://github.com/benaskins/axon-task.git
   - name: axon-tool

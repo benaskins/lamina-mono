@@ -33,6 +33,7 @@ The workspace is populated by `lamina init`, which clones all sub-repos into thi
 | **axon-rule** | Composable business rules using the Specification pattern with generics and type-driven violation codes |
 | **axon-synd** | Personal syndication engine — publish to a static site, syndicate to Bluesky, Mastodon, Threads |
 | **axon-talk** | LLM provider adapters for axon-loop (Ollama, Cloudflare Workers AI) |
+| **axon-tape** | Buffered token stream filter with pluggable matchers, content safety, and PII redaction |
 | **axon-task** | Generic asynchronous task runner with pluggable workers |
 | **axon-tool** | Tool definition and execution primitives for LLM agents |
 | **axon-wire** | HTTP transport that routes outbound requests through a Cloudflare Worker proxy |
@@ -70,6 +71,7 @@ axon-fact    ─── event sourcing primitives (no dependencies)
 axon-mind    ─── embedded Prolog engine (no dependencies)
 axon-nats    ─── NATS adapters (depends on axon)
 axon-rule    ─── composable business rules (no dependencies)
+axon-tape    ─── buffered token stream filter (no dependencies)
 ```
 
 Services (built from libraries):
