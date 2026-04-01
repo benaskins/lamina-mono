@@ -15,6 +15,15 @@ docs/pir/
 # Private facts (Prolog knowledge bases, not published)
 facts/
 
+# Claude Code worktrees
+.claude/worktrees/
+
+# Local data
+data/
+
+# Experimental (local prototypes)
+experimental/
+
 # Dependencies
 node_modules/
 
