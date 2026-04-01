@@ -27,6 +27,8 @@ repos:
     url: https://github.com/benaskins/axon-mind.git
   - name: axon-nats
     url: https://github.com/benaskins/axon-nats.git
+  - name: axon-rule
+    url: https://github.com/benaskins/axon-rule.git
   - name: axon-synd
     url: https://github.com/benaskins/axon-synd.git
   - name: axon-talk

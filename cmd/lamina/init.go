@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/benaskins/lamina"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -37,36 +38,13 @@ func repoDir(root string, r repo) string {
 	return filepath.Join(root, r.Name)
 }
 
-// defaultRepos is the built-in fallback when repos.yaml doesn't exist.
-var defaultRepos = []repo{
-	{Name: "aurelia", URL: "https://github.com/benaskins/aurelia.git"},
-	{Name: "axon", URL: "https://github.com/benaskins/axon.git"},
-	{Name: "axon-auth", URL: "https://github.com/benaskins/axon-auth.git"},
-	{Name: "axon-book", URL: "https://github.com/benaskins/axon-book.git"},
-	{Name: "axon-chat", URL: "https://github.com/benaskins/axon-chat.git"},
-	{Name: "axon-eval", URL: "https://github.com/benaskins/axon-eval.git"},
-	{Name: "axon-fact", URL: "https://github.com/benaskins/axon-fact.git"},
-	{Name: "axon-gate", URL: "https://github.com/benaskins/axon-gate.git"},
-	{Name: "axon-lens", URL: "https://github.com/benaskins/axon-lens.git"},
-	{Name: "axon-look", URL: "https://github.com/benaskins/axon-look.git"},
-	{Name: "axon-loop", URL: "https://github.com/benaskins/axon-loop.git"},
-	{Name: "axon-memo", URL: "https://github.com/benaskins/axon-memo.git"},
-	{Name: "axon-mind", URL: "https://github.com/benaskins/axon-mind.git"},
-	{Name: "axon-nats", URL: "https://github.com/benaskins/axon-nats.git"},
-	{Name: "axon-synd", URL: "https://github.com/benaskins/axon-synd.git"},
-	{Name: "axon-talk", URL: "https://github.com/benaskins/axon-talk.git"},
-	{Name: "axon-task", URL: "https://github.com/benaskins/axon-task.git"},
-	{Name: "axon-tool", URL: "https://github.com/benaskins/axon-tool.git"},
-}
-
 // loadRepos reads repos.yaml from the given directory. If the file doesn't
-// exist, returns the built-in default list.
+// exist, falls back to the embedded repos.yaml compiled into the binary.
 func loadRepos(dir string) ([]repo, error) {
 	data, err := os.ReadFile(filepath.Join(dir, "repos.yaml"))
 	if os.IsNotExist(err) {
-		return defaultRepos, nil
-	}
-	if err != nil {
+		data = lamina.DefaultReposYAML
+	} else if err != nil {
 		return nil, err
 	}
 

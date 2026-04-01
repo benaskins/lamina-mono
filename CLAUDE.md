@@ -30,6 +30,7 @@ The workspace is populated by `lamina init`, which clones all sub-repos into thi
 | **axon-memo** | Long-term memory extraction and consolidation for LLM agents |
 | **axon-mind** | Embedded Prolog engine for structured inference over facts and rules |
 | **axon-nats** | NATS adapters for axon services — EventBus[T] for cross-instance fan-out |
+| **axon-rule** | Composable business rules using the Specification pattern with generics and type-driven violation codes |
 | **axon-synd** | Personal syndication engine — publish to a static site, syndicate to Bluesky, Mastodon, Threads |
 | **axon-talk** | LLM provider adapters for axon-loop (Ollama, Cloudflare Workers AI) |
 | **axon-task** | Generic asynchronous task runner with pluggable workers |
@@ -68,6 +69,7 @@ axon-lens    ─── image pipeline (depends on axon-tool)
 axon-fact    ─── event sourcing primitives (no dependencies)
 axon-mind    ─── embedded Prolog engine (no dependencies)
 axon-nats    ─── NATS adapters (depends on axon)
+axon-rule    ─── composable business rules (no dependencies)
 ```
 
 Services (built from libraries):
