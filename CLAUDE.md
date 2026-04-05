@@ -16,27 +16,36 @@ The workspace is populated by `lamina init`, which clones all sub-repos into thi
 
 | Repo | Purpose |
 |------|---------|
-| **aurelia** | Process supervisor for native processes and Docker containers, with macOS-specific enhancements |
-| **axon** | Shared Go toolkit for AI-powered web services (HTTP lifecycle, auth, SSE, streaming) |
-| **axon-auth** | WebAuthn-based authentication with passkey registration, login, and session management |
-| **axon-book** | Event-sourced double-entry bookkeeping — general ledger, chart of accounts, journal entries via axon-fact |
-| **axon-chat** | Chat service with LLM integration, tool calling, SSE streaming, and agent management |
-| **axon-eval** | Evaluation framework for running scenario plans against a live service cluster |
-| **axon-fact** | Event sourcing primitives — Event type, EventStore/Projector/Publisher interfaces |
-| **axon-gate** | Deploy approval gate with Signal notifications and a review UI |
-| **axon-lens** | Image generation pipeline — prompt merging, FLUX.1 via MLX, gallery storage |
+| **aurelia** | Process supervisor for native processes and Docker containers, with macOS enhancements |
+| **axon** | Shared Go toolkit for AI-powered web services: HTTP lifecycle, auth, SSE, streaming |
+| **axon-auth** | WebAuthn authentication: passkey registration, login, session management |
+| **axon-base** | Postgres primitives: pgx pool, repository interfaces, goose migrations, row scanning |
+| **axon-book** | Event-sourced double-entry bookkeeping: ledger, chart of accounts, journal entries |
+| **axon-chat** | Chat service: LLM integration, tool calling, SSE streaming, agent management |
+| **axon-code** | Claude Code integration: structured tool calling from axon-loop agents |
+| **axon-cost** | LLM inference cost tracking: middleware wrapping axon-talk, rate tables, budget alerts |
+| **axon-eval** | Evaluation framework: scenario plans run against a live service cluster |
+| **axon-face** | Frontend component library for axon service UIs |
+| **axon-fact** | Event sourcing primitives: Event type, EventStore/Projector/Publisher interfaces |
+| **axon-gate** | Deploy approval gate with Signal notifications and review UI |
+| **axon-hand** | CLI scaffolding for axon tool implementations |
+| **axon-lens** | Image generation pipeline: prompt merging, FLUX.1 via MLX, gallery storage |
 | **axon-look** | Analytics event ingestion and querying backed by ClickHouse |
 | **axon-loop** | Provider-agnostic conversation loop for LLM-powered agents |
 | **axon-memo** | Long-term memory extraction and consolidation for LLM agents |
 | **axon-mind** | Embedded Prolog engine for structured inference over facts and rules |
-| **axon-nats** | NATS adapters for axon services — EventBus[T] for cross-instance fan-out |
-| **axon-rule** | Composable business rules using the Specification pattern with generics and type-driven violation codes |
-| **axon-synd** | Personal syndication engine — publish to a static site, syndicate to Bluesky, Mastodon, Threads |
+| **axon-nats** | NATS adapters: EventBus[T] for cross-instance fan-out |
+| **axon-push** | Push notification primitives |
+| **axon-rule** | Composable business rules and guard-driven state machine (Specification pattern) |
+| **axon-scan** | Code quality pipeline: static analysis, security scanning, test execution, attestation |
+| **axon-sign** | Cryptographic signing: Ed25519 keypairs, SSHSIG signatures, key rotation, provenance |
+| **axon-snip** | Code assembly engine: PRD analysis, module selection, scaffold generation |
+| **axon-synd** | Syndication engine: publish to static site, syndicate to Bluesky, Mastodon, Threads |
 | **axon-talk** | LLM provider adapters for axon-loop (Ollama, Cloudflare Workers AI) |
-| **axon-tape** | Buffered token stream filter with pluggable matchers, content safety, and PII redaction |
-| **axon-task** | Generic asynchronous task runner with pluggable workers |
+| **axon-tape** | Buffered token stream filter: pluggable matchers, content safety, PII redaction |
+| **axon-task** | Generic async task runner with pluggable workers |
 | **axon-tool** | Tool definition and execution primitives for LLM agents |
-| **axon-wire** | HTTP transport that routes outbound requests through a Cloudflare Worker proxy |
+| **axon-wire** | HTTP transport routing outbound requests through a Cloudflare Worker proxy |
 
 Each sub-repo has its own `CLAUDE.md` or `AGENTS.md`. When working in a sub-repo, read its project-level docs first.
 
@@ -59,35 +68,46 @@ lamina (at rest)                    aurelia (in flight)
 
 ## Dependency Graph
 
-Libraries (no service dependencies):
+Primitives (stdlib-only):
 ```
-axon         ─── server lifecycle, auth, SSE, metrics
-axon-tool    ─── tool definitions for LLM agents
-axon-loop    ─── conversation loop (depends on axon-tool)
-axon-talk    ─── LLM provider adapters (depends on axon-loop)
-axon-wire    ─── HTTP proxy transport (no dependencies)
-axon-lens    ─── image pipeline (depends on axon-tool)
-axon-fact    ─── event sourcing primitives (no dependencies)
-axon-mind    ─── embedded Prolog engine (no dependencies)
-axon-nats    ─── NATS adapters (depends on axon)
-axon-rule    ─── composable business rules (no dependencies)
-axon-tape    ─── buffered token stream filter (no dependencies)
+axon-mind    : embedded Prolog engine
+axon-push    : push notification primitives
+axon-rule    : business rules + state machine (Specification pattern)
+axon-tape    : buffered token stream filter
+axon-tool    : tool definitions for LLM agents
+axon-wire    : HTTP proxy transport
 ```
 
-Services (built from libraries):
+Primitives (with deps):
 ```
-axon-auth    ─── authentication (axon)
-axon-chat    ─── chat + agents (axon, axon-loop, axon-tool, axon-fact)
-axon-gate    ─── deploy approval gate (axon)
-axon-look    ─── analytics (axon)
-axon-memo    ─── long-term memory (axon)
-axon-task    ─── task runner (axon)
-axon-synd    ─── syndication engine (axon, axon-fact, axon-gate)
+axon         : server lifecycle, auth, SSE, metrics
+axon-base    : Postgres pool, repository, migrations (pgx, goose)
+axon-cost    : LLM cost tracking middleware (axon-talk, axon-fact)
+axon-fact    : event sourcing primitives (pgx, goose)
+axon-loop    : conversation loop (axon-tool)
+axon-nats    : NATS adapters (axon, nats.go)
+axon-scan    : code quality pipeline (axon-loop, axon-tool)
+axon-sign    : cryptographic signing (golang.org/x/crypto)
+axon-talk    : LLM provider adapters (axon-tape, axon-tool)
+```
+
+Domain packages:
+```
+axon-auth    : authentication (axon)
+axon-book    : double-entry bookkeeping (axon, axon-fact)
+axon-chat    : chat + agents (axon, axon-loop, axon-tool, axon-fact)
+axon-gate    : deploy approval gate (axon)
+axon-lens    : image pipeline (axon-tool)
+axon-look    : analytics (axon)
+axon-memo    : long-term memory (axon)
+axon-snip    : code assembly (axon-loop, axon-talk, axon-tool)
+axon-synd    : syndication engine (axon, axon-fact, axon-gate)
+axon-task    : task runner (axon)
 ```
 
 Standalone:
 ```
-axon-eval    ─── evaluation framework
+axon-eval    : evaluation framework
 ```
 
 ## lamina CLI

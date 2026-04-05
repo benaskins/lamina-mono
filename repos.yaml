@@ -5,8 +5,16 @@ repos:
     url: https://github.com/benaskins/axon.git
   - name: axon-auth
     url: https://github.com/benaskins/axon-auth.git
+  - name: axon-base
+    url: https://github.com/benaskins/axon-base.git
+  - name: axon-book
+    url: https://github.com/benaskins/axon-book.git
   - name: axon-chat
     url: https://github.com/benaskins/axon-chat.git
+  - name: axon-code
+    url: https://github.com/benaskins/axon-code.git
+  - name: axon-cost
+    url: https://github.com/benaskins/axon-cost.git
   - name: axon-eval
     url: https://github.com/benaskins/axon-eval.git
   - name: axon-face
@@ -15,6 +23,8 @@ repos:
     url: https://github.com/benaskins/axon-fact.git
   - name: axon-gate
     url: https://github.com/benaskins/axon-gate.git
+  - name: axon-hand
+    url: https://github.com/benaskins/axon-hand.git
   - name: axon-lens
     url: https://github.com/benaskins/axon-lens.git
   - name: axon-look
@@ -27,8 +37,16 @@ repos:
     url: https://github.com/benaskins/axon-mind.git
   - name: axon-nats
     url: https://github.com/benaskins/axon-nats.git
+  - name: axon-push
+    url: https://github.com/benaskins/axon-push.git
   - name: axon-rule
     url: https://github.com/benaskins/axon-rule.git
+  - name: axon-scan
+    url: https://github.com/benaskins/axon-scan.git
+  - name: axon-sign
+    url: https://github.com/benaskins/axon-sign.git
+  - name: axon-snip
+    url: https://github.com/benaskins/axon-snip.git
   - name: axon-synd
     url: https://github.com/benaskins/axon-synd.git
   - name: axon-talk
