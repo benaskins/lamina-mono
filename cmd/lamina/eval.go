@@ -33,9 +33,9 @@ func runEval(cmd *cobra.Command, args []string) error {
 	}
 
 	cfg := eval.Config{
-		AuthURL:      envOrDefault("AUTH_URL", "https://auth.studio.internal"),
-		ChatURL:      envOrDefault("CHAT_URL", "https://chat.studio.internal"),
-		AnalyticsURL: envOrDefault("ANALYTICS_URL", "https://analytics.studio.internal"),
+		AuthURL:      envOrDefault("AUTH_URL", "https://auth.hestia.internal"),
+		ChatURL:      envOrDefault("CHAT_URL", "https://chat.hestia.internal"),
+		AnalyticsURL: envOrDefault("ANALYTICS_URL", "https://analytics.hestia.internal"),
 	}
 
 	client, err := eval.NewClient(cfg)

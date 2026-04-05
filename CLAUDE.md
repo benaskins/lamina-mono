@@ -192,7 +192,7 @@ lamina/
 ## Conventions
 
 - **Task runner**: `just` (justfile) in lamina and aurelia; standard `go` tooling in axon-* modules
-- **Internal domain**: `*.studio.internal` (not `.local`)
+- **Internal domain**: `*.hestia.internal` / `*.limen.internal` (not `.local`)
 - **Native services**: Go binaries compiled for darwin/arm64, embed SvelteKit UIs via `//go:embed`
 - **Containerized services**: Run on OrbStack (postgres, grafana, loki, traefik, vault, etc.)
 - **AI agent docs**: Each project has `CLAUDE.md` or `AGENTS.md` with full architecture docs for any AI coding agent
