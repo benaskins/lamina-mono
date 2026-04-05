@@ -158,10 +158,52 @@ func runIntake(cmd *cobra.Command, args []string) error {
 		// Determine target dir in lamina workspace
 		targetDir := filepath.Join(root, modName)
 		isUpdate := false
+		hasLocalGit := false
 		if _, err := os.Stat(filepath.Join(targetDir, ".git")); err == nil {
+			hasLocalGit = true
+		}
+
+		remoteExists := ghRepoExists("benaskins/" + modName)
+
+		switch {
+		case hasLocalGit && remoteExists:
+			// Verify the local repo is connected to the right remote.
+			// A factory build can leave a .git with no remote, which would
+			// cause us to treat fabricated history as the real thing.
+			origin := gitOutput(targetDir, "remote", "get-url", "origin")
+			if origin == "" || !strings.Contains(origin, modName) {
+				return fmt.Errorf("%s: local .git exists but has no valid origin remote "+
+					"(expected github.com/benaskins/%s). Remove the directory and re-run intake, "+
+					"or clone the real repo manually", e.Name, modName)
+			}
 			isUpdate = true
 			fmt.Printf("  target: %s (update existing)\n", modName)
-		} else {
+
+		case !hasLocalGit && remoteExists:
+			// Repo exists on GitHub but not cloned locally. Clone it first
+			// so we update on top of real history rather than overwriting it.
+			fmt.Printf("  target: %s (exists on GitHub, cloning first)\n", modName)
+			if !dryRun {
+				// Remove any non-git directory left by a previous failed intake
+				if _, err := os.Stat(targetDir); err == nil {
+					if err := os.RemoveAll(targetDir); err != nil {
+						return fmt.Errorf("%s: remove stale directory: %w", e.Name, err)
+					}
+				}
+				if err := runGit(root, "clone",
+					fmt.Sprintf("https://github.com/benaskins/%s.git", modName),
+					modName); err != nil {
+					return fmt.Errorf("%s: clone existing repo failed: %w", e.Name, err)
+				}
+			}
+			isUpdate = true
+
+		case hasLocalGit && !remoteExists:
+			// Local .git but no GitHub repo — could be a factory build with
+			// fabricated history. Treat as new but warn.
+			fmt.Printf("  target: %s (local .git found, no GitHub repo — treating as new)\n", modName)
+
+		default:
 			fmt.Printf("  target: %s (new)\n", modName)
 		}
 
@@ -363,6 +405,14 @@ func stripReplaces(root, dir string) error {
 	}
 	fmt.Printf("  go.mod: stripped replace directives\n")
 	return os.WriteFile(modPath, out, 0644)
+}
+
+// ghRepoExists checks if a GitHub repo exists using the gh CLI.
+func ghRepoExists(nwo string) bool {
+	cmd := exec.Command("gh", "repo", "view", nwo, "--json", "url")
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+	return cmd.Run() == nil
 }
 
 func createAndPushRepo(name, dir string) error {
