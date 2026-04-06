@@ -125,7 +125,18 @@ func healAheadOfTag(ctx context.Context, root string, d Diagnostic, dryRun bool)
 	}
 
 	name := repoNameFromDiagnostic(d)
-	nextTag, err := bumpPatch(d.LatestTag)
+
+	// Determine bump kind from commit history since last tag
+	log := gitOutput(d.Dir, "log", d.LatestTag+"..HEAD", "--oneline")
+	bump := inferBumpKind(log)
+
+	var nextTag string
+	var err error
+	if bump == "minor" {
+		nextTag, err = bumpMinor(d.LatestTag)
+	} else {
+		nextTag, err = bumpPatch(d.LatestTag)
+	}
 	if err != nil {
 		return fmt.Errorf("computing next version: %w", err)
 	}
@@ -189,6 +200,38 @@ func healAgentDocs(d Diagnostic, dryRun bool) error {
 	}
 
 	return nil
+}
+
+// inferBumpKind reads a git log (oneline format) and returns "minor" if any
+// commit is a feat: or refactor:, otherwise "patch".
+func inferBumpKind(log string) string {
+	for _, line := range strings.Split(log, "\n") {
+		// Skip the commit hash prefix to find the conventional commit type
+		parts := strings.SplitN(line, " ", 2)
+		if len(parts) < 2 {
+			continue
+		}
+		msg := parts[1]
+		if strings.HasPrefix(msg, "feat:") || strings.HasPrefix(msg, "feat(") ||
+			strings.HasPrefix(msg, "refactor:") || strings.HasPrefix(msg, "refactor(") {
+			return "minor"
+		}
+	}
+	return "patch"
+}
+
+// bumpMinor increments the minor version and resets patch: v0.3.1 -> v0.4.0
+func bumpMinor(tag string) (string, error) {
+	v := strings.TrimPrefix(tag, "v")
+	parts := strings.Split(v, ".")
+	if len(parts) != 3 {
+		return "", fmt.Errorf("unexpected version format: %s", tag)
+	}
+	minor, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return "", fmt.Errorf("parsing minor version: %w", err)
+	}
+	return fmt.Sprintf("v%s.%d.0", parts[0], minor+1), nil
 }
 
 // bumpPatch increments the patch version: v0.3.0 -> v0.3.1
