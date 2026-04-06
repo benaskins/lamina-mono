@@ -12,6 +12,9 @@ docs/plans/
 # PIR (local research, not committed)
 docs/pir/
 
+# Fiction project (local creative work, not committed)
+docs/fiction/
+
 # Private facts (Prolog knowledge bases, not published)
 facts/
 
