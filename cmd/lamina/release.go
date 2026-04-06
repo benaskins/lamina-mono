@@ -97,7 +97,6 @@ func releaseOne(ctx context.Context, root, name, version string, dryRun bool) er
 	if err != nil {
 		return fmt.Errorf("%q is not a git repo in the workspace", name)
 	}
-	isApp := strings.HasPrefix(dir, filepath.Join(root, "apps")+string(os.PathSeparator))
 	if _, err := os.Stat(filepath.Join(dir, "go.mod")); err != nil {
 		return fmt.Errorf("%q has no go.mod", name)
 	}
@@ -147,43 +146,14 @@ func releaseOne(ctx context.Context, root, name, version string, dryRun bool) er
 		return nil
 	}
 
-	// For apps: strip replace directives, tidy, commit, tag, then restore
-	if isApp {
-		if err := stripAppReplaces(root, dir); err != nil {
-			return fmt.Errorf("stripping replace directives: %w", err)
-		}
-		tidyCmd := exec.Command("go", "mod", "tidy")
-		tidyCmd.Dir = dir
-		if err := tidyCmd.Run(); err != nil {
-			restoreAppReplaces(dir)
-			return fmt.Errorf("go mod tidy after stripping replaces: %w", err)
-		}
-		_ = runGit(dir, "add", "go.mod", "go.sum")
-		_ = runGit(dir, "commit", "-m", fmt.Sprintf("release: strip replace directives for %s", version))
-	}
-
 	fmt.Printf("Tagging %s %s...\n", name, version)
 	if err := runGit(dir, "tag", version); err != nil {
-		if isApp {
-			restoreAppReplaces(dir)
-		}
 		return fmt.Errorf("git tag failed: %w", err)
 	}
 
 	fmt.Printf("Pushing tag %s...\n", version)
 	if err := runGit(dir, "push", "origin", version); err != nil {
-		if isApp {
-			restoreAppReplaces(dir)
-		}
 		return fmt.Errorf("git push failed: %w", err)
-	}
-
-	// For apps: push the commit with stripped replaces, then restore for local dev
-	if isApp {
-		_ = runGit(dir, "push", "origin", "main")
-		if err := restoreAppReplaces(dir); err != nil {
-			fmt.Printf("  warning: could not restore replace directives: %v\n", err)
-		}
 	}
 
 	fmt.Printf("Released %s %s\n", name, version)
@@ -706,58 +676,3 @@ func runGit(dir string, args ...string) error {
 	return cmd.Run()
 }
 
-// stripAppReplaces removes all workspace replace directives from an app's go.mod
-// and pins require versions to the latest published tag for each dependency.
-func stripAppReplaces(root, appDir string) error {
-	modPath := filepath.Join(appDir, "go.mod")
-	data, err := os.ReadFile(modPath)
-	if err != nil {
-		return err
-	}
-	f, err := modfile.Parse(modPath, data, nil)
-	if err != nil {
-		return err
-	}
-
-	for _, rep := range f.Replace {
-		// Only strip local (relative path) replaces for workspace modules
-		if !strings.HasPrefix(rep.New.Path, ".") && !strings.HasPrefix(rep.New.Path, "/") {
-			continue
-		}
-
-		// Before dropping the replace, pin the require to the latest published tag
-		if strings.HasPrefix(rep.Old.Path, modulePrefix) {
-			depName := strings.TrimPrefix(rep.Old.Path, modulePrefix)
-			depDir, err := resolveRepoDir(root, depName)
-			if err == nil {
-				latestTag := gitOutput(depDir, "describe", "--tags", "--abbrev=0")
-				if latestTag != "" {
-					if err := f.AddRequire(rep.Old.Path, latestTag); err != nil {
-						fmt.Fprintf(os.Stderr, "    warning: could not pin %s to %s: %v\n", depName, latestTag, err)
-					}
-				}
-			}
-		}
-
-		if err := f.DropReplace(rep.Old.Path, rep.Old.Version); err != nil {
-			return fmt.Errorf("dropping replace for %s: %w", rep.Old.Path, err)
-		}
-	}
-
-	f.Cleanup()
-	out, err := f.Format()
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(modPath, out, 0644)
-}
-
-// restoreAppReplaces restores replace directives by re-wiring them from the workspace.
-// Uses git checkout to restore go.mod to the pre-strip state, then tidies.
-func restoreAppReplaces(appDir string) error {
-	if err := runGit(appDir, "checkout", "HEAD~1", "--", "go.mod", "go.sum"); err != nil {
-		return err
-	}
-	_ = runGit(appDir, "add", "go.mod", "go.sum")
-	return runGit(appDir, "commit", "-m", "release: restore replace directives for local development")
-}
