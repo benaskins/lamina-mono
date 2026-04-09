@@ -31,6 +31,8 @@ repos:
     url: https://github.com/benaskins/axon-look.git
   - name: axon-loop
     url: https://github.com/benaskins/axon-loop.git
+  - name: axon-lore
+    url: https://github.com/benaskins/axon-lore.git
   - name: axon-memo
     url: https://github.com/benaskins/axon-memo.git
   - name: axon-mind
@@ -61,6 +63,9 @@ repos:
     url: https://github.com/benaskins/axon-wire.git
   - name: imago
     url: https://github.com/benaskins/imago.git
+    kind: app
+  - name: revue
+    url: https://github.com/benaskins/revue.git
     kind: app
   - name: vita
     url: https://github.com/benaskins/vita.git
