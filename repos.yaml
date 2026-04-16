@@ -67,6 +67,9 @@ repos:
   - name: revue
     url: https://github.com/benaskins/revue.git
     kind: app
+  - name: valuer
+    url: https://github.com/benaskins/valuer.git
+    kind: app
   - name: vita
     url: https://github.com/benaskins/vita.git
     kind: app

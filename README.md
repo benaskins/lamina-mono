@@ -99,7 +99,7 @@ Toolkit:
 
 Primitives:
   axon-tool    --- tool definitions for LLM agents
-  axon-loop    --- conversation loop (axon-tool)
+  axon-loop    --- conversation loop (axon-talk, axon-tool)
   axon-talk    --- LLM provider adapters (axon-tape, axon-tool)
   axon-tape    --- buffered token stream filter
   axon-base    --- PostgreSQL foundation (pgx, goose)
@@ -108,12 +108,12 @@ Primitives:
   axon-sign    --- cryptographic signing (golang.org/x/crypto)
   axon-mind    --- embedded Prolog engine
   axon-wire    --- HTTP proxy transport
-  axon-nats    --- NATS adapters (axon)
+  axon-nats    --- NATS adapters (axon-push, nats.go)
   axon-push    --- push notification primitives
 
 Agent infrastructure:
   axon-hand    --- agent chassis (axon-talk)
-  axon-code    --- coding agent (axon-loop, axon-tool)
+  axon-code    --- coding agent (axon-loop, axon-talk, axon-tool)
   axon-snip    --- code assembly (axon-loop, axon-talk, axon-tool)
   axon-scan    --- quality pipeline (axon-loop, axon-tool)
   axon-cost    --- cost tracking (axon-talk, axon-fact)
