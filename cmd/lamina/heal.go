@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -42,33 +43,43 @@ func runHeal(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Filter to healable issues
-	var actions []Diagnostic
+	// Separate release actions (need dependency ordering) from other actions
+	var releaseActions []Diagnostic
+	var otherActions []Diagnostic
 	for _, d := range diags {
 		switch d.Kind {
-		case "untagged", "ahead-of-tag", "agent-docs-missing":
-			actions = append(actions, d)
+		case "untagged", "ahead-of-tag":
+			releaseActions = append(releaseActions, d)
+		case "agent-docs-missing":
+			otherActions = append(otherActions, d)
 		}
 	}
 
-	if len(actions) == 0 {
+	if len(releaseActions) == 0 && len(otherActions) == 0 {
 		fmt.Println("Nothing to heal")
 		return nil
 	}
 
-	for _, d := range actions {
-		switch d.Kind {
-		case "untagged":
-			if err := healUntagged(cmd.Context(), root, d, dryRun); err != nil {
-				fmt.Printf("  FAIL %s: %v\n", d.Name, err)
-			}
-		case "ahead-of-tag":
-			if err := healAheadOfTag(cmd.Context(), root, d, dryRun); err != nil {
-				fmt.Printf("  FAIL %s: %v\n", d.Name, err)
-			}
-		case "agent-docs-missing":
-			if err := healAgentDocs(d, dryRun); err != nil {
-				fmt.Printf("  FAIL %s: %v\n", d.Name, err)
+	// Non-release actions first (e.g. docs) — no ordering needed
+	for _, d := range otherActions {
+		if err := healAgentDocs(d, dryRun); err != nil {
+			fmt.Printf("  FAIL %s: %v\n", d.Name, err)
+		}
+	}
+
+	// Release actions in dependency order so libraries are tagged before dependents
+	if len(releaseActions) > 0 {
+		ordered := orderReleaseActions(root, releaseActions)
+		for _, d := range ordered {
+			switch d.Kind {
+			case "untagged":
+				if err := healUntagged(cmd.Context(), root, d, dryRun); err != nil {
+					fmt.Printf("  FAIL %s: %v\n", d.Name, err)
+				}
+			case "ahead-of-tag":
+				if err := healAheadOfTag(cmd.Context(), root, d, dryRun); err != nil {
+					fmt.Printf("  FAIL %s: %v\n", d.Name, err)
+				}
 			}
 		}
 	}
@@ -200,6 +211,33 @@ func healAgentDocs(d Diagnostic, dryRun bool) error {
 	}
 
 	return nil
+}
+
+// orderReleaseActions topologically sorts release diagnostics so dependencies
+// are released before the modules that depend on them.
+func orderReleaseActions(root string, diags []Diagnostic) []Diagnostic {
+	// Index diagnostics by repo name
+	byName := make(map[string]Diagnostic)
+	var modules []releaseModule
+	for _, d := range diags {
+		name := repoNameFromDiagnostic(d)
+		byName[name] = d
+
+		// Read workspace deps from go.mod
+		modPath := filepath.Join(d.Dir, "go.mod")
+		deps := workspaceDeps(modPath)
+		modules = append(modules, releaseModule{name: name, deps: deps})
+	}
+
+	ordered := topoSort(modules)
+
+	var result []Diagnostic
+	for _, name := range ordered {
+		if d, ok := byName[name]; ok {
+			result = append(result, d)
+		}
+	}
+	return result
 }
 
 // inferBumpKind reads a git log (oneline format) and returns "minor" if any
