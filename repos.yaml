@@ -63,6 +63,9 @@ repos:
     url: https://github.com/benaskins/axon-tool.git
   - name: axon-wire
     url: https://github.com/benaskins/axon-wire.git
+  - name: facet
+    url: https://github.com/benaskins/facet.git
+    kind: app
   - name: imago
     url: https://github.com/benaskins/imago.git
     kind: app
