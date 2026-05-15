@@ -4,6 +4,7 @@ use (
 	.
 	./apps/facet
 	./apps/imago
+	./apps/mock-murray
 	./apps/revue
 	./apps/valuer
 	./apps/vita
