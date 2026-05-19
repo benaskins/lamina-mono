@@ -1,6 +1,8 @@
 repos:
   - name: aurelia
     url: https://github.com/benaskins/aurelia.git
+  - name: aurelia-k8s
+    url: https://github.com/benaskins/aurelia-k8s.git
   - name: axon
     url: https://github.com/benaskins/axon.git
   - name: axon-auth

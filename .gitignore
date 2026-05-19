@@ -1,5 +1,6 @@
 # Independent git repos — managed separately
 /aurelia/
+/aurelia-k8s/
 axon/
 axon-*/
 
