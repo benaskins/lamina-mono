@@ -19,6 +19,8 @@ repos:
     url: https://github.com/benaskins/axon-cost.git
   - name: axon-eval
     url: https://github.com/benaskins/axon-eval.git
+  - name: axon-faas
+    url: https://github.com/benaskins/axon-faas.git
   - name: axon-face
     url: https://github.com/benaskins/axon-face.git
   - name: axon-fact

@@ -16,6 +16,7 @@ use (
 	./axon-code
 	./axon-cost
 	./axon-eval
+	./axon-faas
 	./axon-face
 	./axon-fact
 	./axon-gate
